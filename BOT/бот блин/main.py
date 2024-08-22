@@ -191,7 +191,7 @@ async def admin (update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             return
 
             # Логика команды, если пользователь является администратором
-        await context.bot.send_message(chat_id=chat_id, text='Команда выполнена.')
+        cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (9000, user_id))
 def main():
     application = ApplicationBuilder().token(TOKEN).build()
     print()
