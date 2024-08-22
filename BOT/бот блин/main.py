@@ -55,7 +55,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 mess = f'Отличный бросок. \n @{user_name} получает 4 очка! \n Баланс @{user_name}: {new_balance}'
             elif dice.value == 4:
                 new_balance = current_balance + 6
-                mess = f'Мастерский бросок. \n @{user_name} получает 6 очка! \n Баланс @{user_name}: {new_balance}'
+                mess = f'Мастерский бросок. \n @{user_name} получает 6 очков! \n Баланс @{user_name}: {new_balance}'
             elif dice.value == 5:
                 new_balance = current_balance + 8
                 mess = f'Офигенный бросок! \n @{user_name} получает 8 очков! \n Баланс @{user_name}: {new_balance}'
@@ -74,7 +74,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 mess = f'КРИТИЧЕСКАЯ НЕУДАЧА ❗️😫  \n @{user_name} теряет 15 очков! \n Баланс @{user_name}: {new_balance}'
             elif dice.value == 2:
                 new_balance = current_balance + 1
-                mess = f'И это всё на что ты способен ?🤨 \n @{user_name} получает 1 очков! \n Баланс @{user_name}: {new_balance}'
+                mess = f'И это всё на что ты способен ?🤨 \n @{user_name} получает 1 очко! \n Баланс @{user_name}: {new_balance}'
             elif dice.value == 3:
                 new_balance = current_balance + 3
                 mess = f'Для начала не плохо. Продолжаем 👀 \n @{user_name} получает 3 очка! \n Баланс @{user_name}: {new_balance}'
@@ -121,8 +121,8 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 new_balance = current_balance + 20
                 mess = f'Тебе завидует даже Джордан 😍 \n @{user_name} получает 20 очков! \n Баланс @{user_name}: {new_balance}'
             elif dice.value < 4:
-                new_balance = current_balance - 15
-                mess = f'Встань поближе и попробуй ещё раз \n @{user_name} теряет 15 очков! \n Баланс @{user_name}: {new_balance}'
+                new_balance = current_balance - 20
+                mess = f'Встань поближе и попробуй ещё раз \n @{user_name} теряет 20 очков! \n Баланс @{user_name}: {new_balance}'
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
             await context.bot.send_message(chat_id=update.effective_chat.id, text=mess,
@@ -130,8 +130,8 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
         elif dice.emoji == '⚽':  # Кубик
             if dice.value > 2:
-                new_balance = current_balance +15
-                mess = f'Шиииииш. Отличный удар🥳 \n @{user_name} получает 15 очков! \n Баланс @{user_name}: {new_balance}'
+                new_balance = current_balance +20
+                mess = f'Шиииииш. Отличный удар🥳 \n @{user_name} получает 20 очков! \n Баланс @{user_name}: {new_balance}'
             elif dice.value <3:
                 new_balance = current_balance - 20
                 mess = f'Ты как Дантес! Косишь на оба глаза? \n @{user_name} теряет 20 очков! \n Баланс @{user_name}: {new_balance}'
@@ -143,23 +143,23 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         elif dice.emoji == '🎰':  # Кубик
             if dice.value == 1:
                 new_balance = current_balance +5
-                mess = f'Как вкусно... \n @{user_name} получает 20 очков! \n Баланс @{user_name}: {new_balance}'
+                mess = f'Как вкусно... \n @{user_name} получает 5 очков! \n Баланс @{user_name}: {new_balance}'
             elif dice.value == 22:
-                new_balance = current_balance + 10
-                mess = f'А теперь уже кисленько... Зато выйграл! \n @{user_name} получает 30 очков! \n Баланс @{user_name}: {new_balance}'
+                new_balance = current_balance + 7
+                mess = f'А теперь уже кисленько... Зато выйграл! \n @{user_name} получает 7 очков! \n Баланс @{user_name}: {new_balance}'
             elif dice.value == 43:
-                new_balance = current_balance + 15
-                mess = f'ВОУ! Это уже приятно! \n @{user_name} получает 40 очков! \n Баланс @{user_name}: {new_balance}'
+                new_balance = current_balance + 3
+                mess = f'ВОУ! Это уже приятно! \n @{user_name} получает 3 очкf! \n Баланс @{user_name}: {new_balance}'
 
-            elif dice.value == 16 or dice.value == 32 or dice.value == 48:
-                new_balance = current_balance + 20
-                mess = f'АААААА ТАК БЛИЗКО \n @{user_name} получает 50 очков! \n Баланс @{user_name}: {new_balance}'
-            elif dice.value ==64:
-                new_balance = current_balance + 25
+            elif dice.value == 1 or dice.value == 22 or dice.value == 43:
+                new_balance = current_balance + 10
+                mess = f'АААААА ТАК БЛИЗКО \n @{user_name} получает 10 очков! \n Баланс @{user_name}: {new_balance}'
+            elif dice.value ==1 or dice.value == 22 or dice.value == 43 or dice.value == 64:
+                new_balance = current_balance + 50
                 mess = f'Джекпот! Удача на твоей стороне 💸 \n @{user_name} получает 50 очков! \n Баланс @{user_name}: {new_balance}'
             else:
-                new_balance = current_balance - 10
-                mess = f'Удача покинула тебя 😔 \n @{user_name} теряет 10 очков! \n Баланс @{user_name}: {new_balance}'
+                new_balance = current_balance - 30
+                mess = f'{dice.value} Удача покинула тебя 😔 \n @{user_name} теряет 30 очков! \n Баланс @{user_name}: {new_balance}'
 
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
