@@ -141,17 +141,17 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                                            message_thread_id=4)
 
         elif dice.emoji == '🎰':  # Кубик
-            if dice.value == 1:
+            if dice.value == 24 or dice.value == 25 or dice.value == 26 or dice.value == 18 or dice.value == 30 or dice.value == 38  or dice.value == 54:
                 new_balance = current_balance +5
                 mess = f'Как вкусно... \n @{user_name} получает 5 очков! \n Баланс @{user_name}: {new_balance}'
-            elif dice.value == 22:
+            elif dice.value == 22 or dice.value == 35 or dice.value == 27 or dice.value == 11 or dice.value == 47 or dice.value == 39 or dice.value == 42 or dice.value == 59 or dice.value == 41:
                 new_balance = current_balance + 7
                 mess = f'А теперь уже кисленько... Зато выйграл! \n @{user_name} получает 7 очков! \n Баланс @{user_name}: {new_balance}'
-            elif dice.value == 43:
+            elif dice.value == 17 or dice.value == 13 or dice.value == 3 or dice.value == 4 or dice.value == 9 or dice.value == 5 or dice.value == 2 or dice.value == 49 or dice.value == 33 or dice.value == 18:
                 new_balance = current_balance + 3
-                mess = f'ВОУ! Это уже приятно! \n @{user_name} получает 3 очкf! \n Баланс @{user_name}: {new_balance}'
+                mess = f'ВОУ! Это уже приятно! \n @{user_name} получает 3 очка! \n Баланс @{user_name}: {new_balance}'
 
-            elif dice.value == 1 or dice.value == 22 or dice.value == 43:
+            elif dice.value == 16 or dice.value == 63 or dice.value == 52 or dice.value == 48 or dice.value == 61 or dice.value == 62 or dice.value == 60:
                 new_balance = current_balance + 10
                 mess = f'АААААА ТАК БЛИЗКО \n @{user_name} получает 10 очков! \n Баланс @{user_name}: {new_balance}'
             elif dice.value ==1 or dice.value == 22 or dice.value == 43 or dice.value == 64:
