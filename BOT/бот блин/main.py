@@ -142,20 +142,20 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
         elif dice.emoji == '🎰':  # Кубик
             if dice.value == 1:
-                new_balance = current_balance +20
+                new_balance = current_balance +5
                 mess = f'Как вкусно... \n @{user_name} получает 20 очков! \n Баланс @{user_name}: {new_balance}'
             elif dice.value == 22:
-                new_balance = current_balance + 30
+                new_balance = current_balance + 10
                 mess = f'А теперь уже кисленько... Зато выйграл! \n @{user_name} получает 30 очков! \n Баланс @{user_name}: {new_balance}'
             elif dice.value == 43:
-                new_balance = current_balance + 40
+                new_balance = current_balance + 15
                 mess = f'ВОУ! Это уже приятно! \n @{user_name} получает 40 очков! \n Баланс @{user_name}: {new_balance}'
 
             elif dice.value == 16 or dice.value == 32 or dice.value == 48:
-                new_balance = current_balance + 50
+                new_balance = current_balance + 20
                 mess = f'АААААА ТАК БЛИЗКО \n @{user_name} получает 50 очков! \n Баланс @{user_name}: {new_balance}'
             elif dice.value ==64:
-                new_balance = current_balance + 50
+                new_balance = current_balance + 25
                 mess = f'Джекпот! Удача на твоей стороне 💸 \n @{user_name} получает 50 очков! \n Баланс @{user_name}: {new_balance}'
             else:
                 new_balance = current_balance - 10
