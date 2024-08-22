@@ -182,6 +182,9 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='Вы успешно зарегистрированы!',message_thread_id=4)
 
 async def admin (update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    dice = update.message.dice
+    user_name = update.message.from_user.username
+    user_id = update.message.from_user.id
     if update.message.message_thread_id == 4:
         user_id = update.message.from_user.id
         chat_id = update.effective_chat.id
