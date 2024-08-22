@@ -108,7 +108,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 new_balance = current_balance + 7
                 mess = f'Это было очень близко \n @{user_name} получает 7 очков! \n Баланс @{user_name}: {new_balance}'
             elif dice.value == 6:
-                new_balance = current_balance - 15
+                new_balance = current_balance + 15
                 mess = f'В яблочко 🍎  \n @{user_name} получает 15 очков! \n Баланс @{user_name}: {new_balance}'
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
