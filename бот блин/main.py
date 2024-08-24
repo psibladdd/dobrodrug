@@ -159,7 +159,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 mess = f'Джекпот! Удача на твоей стороне 💸 \n @{user_name} получает 50 очков! \n Баланс @{user_name}: {new_balance}'
             else:
                 new_balance = current_balance - 20
-                mess = f'{dice.value} Удача покинула тебя 😔 \n @{user_name} теряет 20 очков! \n Баланс @{user_name}: {new_balance}'
+                mess = f'Удача покинула тебя 😔 \n @{user_name} теряет 20 очков! \n Баланс @{user_name}: {new_balance}'
 
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
@@ -235,6 +235,28 @@ async def send_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     await context.bot.send_message(chat_id=target_chat_id, text=message_text, message_thread_id=4)
     await context.bot.send_message(chat_id=update.effective_chat.id, text='Сообщение отправлено.')
 
+async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if update.effective_chat.type != Chat.PRIVATE:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text='Эта команда доступна только в личных сообщениях.', message_thread_id=4)
+        return
+
+    user_name = update.message.from_user.username
+    if user_name not in ['hlebnastole', 'why_dyrachyo','sdmfy']:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text='У вас нет доступа к этой команде')
+        return
+    args = context.args
+    message_text = args[0]
+    await context.bot.send_message(chat_id="-1002195401547", text=f"УГАДАЛ СЛОВО! ЭТИМ СЛОВОМ БЫЛО СЛОВО {message_text}", message_thread_id=4)
+    while(true):
+        if(update.message.from_user.text==message_text):
+        cursor.execute('UPDATE users SET balance = balance + ? WHERE username = ?', (args[1], update.message.from_user.text.username))
+        conn.commit()
+        cursor.execute('SELECT balance FROM users WHERE username = ?', (update.message.from_user.text.username))
+        conn.commit()
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"УГАДАЛ СЛОВО! ЭТИМ СЛОВОМ БЫЛО СЛОВО {message_text}", message_thread_id=4)
+        break
+        
+
 
 def main():
     application = ApplicationBuilder().token(TOKEN).build()
@@ -243,6 +265,7 @@ def main():
     application.add_handler(CommandHandler('register', register))
     application.add_handler(CommandHandler('balance', balance))
     application.add_handler(CommandHandler('write', send_message))
+    application.add_handler(CommandHandler('quiz', quiz))
 
     application.run_polling()
 
