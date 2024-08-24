@@ -62,6 +62,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             elif dice.value == 6:
                 new_balance = current_balance + 10
                 mess = f'ЧТО ОН ТВОРИТ 🤯!!?? \n @{user_name} получает 10 очков! \n Баланс @{user_name}: {new_balance}'
+            if(new_balance<0):new_balance=0
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
             await context.bot.send_message(chat_id=update.effective_chat.id,
@@ -87,6 +88,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             elif dice.value == 6:
                 new_balance = current_balance + 15
                 mess = f'СТРАААЙК 👊 \n @{user_name} получает 15 очков! \n Баланс @{user_name}: {new_balance}'
+            if(new_balance<0):new_balance=0
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
             await context.bot.send_message(chat_id=update.effective_chat.id, text=mess,
@@ -110,6 +112,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             elif dice.value == 6:
                 new_balance = current_balance + 15
                 mess = f'В яблочко 🍎  \n @{user_name} получает 15 очков! \n Баланс @{user_name}: {new_balance}'
+            if(new_balance<0):new_balance=0
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
             await context.bot.send_message(chat_id=update.effective_chat.id,
@@ -123,6 +126,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             elif dice.value < 4:
                 new_balance = current_balance - 20
                 mess = f'Встань поближе и попробуй ещё раз \n @{user_name} теряет 20 очков! \n Баланс @{user_name}: {new_balance}'
+            if(new_balance<0):new_balance=0
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
             await context.bot.send_message(chat_id=update.effective_chat.id, text=mess,
@@ -135,6 +139,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             elif dice.value < 3:
                 new_balance = current_balance - 20
                 mess = f'Ты как Дантес! Косишь на оба глаза? \n @{user_name} теряет 20 очков! \n Баланс @{user_name}: {new_balance}'
+            if(new_balance<0):new_balance=0
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
             await context.bot.send_message(chat_id=update.effective_chat.id, text=mess,
@@ -160,7 +165,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             else:
                 new_balance = current_balance - 20
                 mess = f'Удача покинула тебя 😔 \n @{user_name} теряет 20 очков! \n Баланс @{user_name}: {new_balance}'
-
+            if(new_balance<0):new_balance=0
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
             await context.bot.send_message(chat_id=update.effective_chat.id, text=mess,
