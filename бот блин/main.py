@@ -41,7 +41,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                                        message_thread_id=12)
         return
 
-    if (update.message.message_thread_id == 4 and lood_flag == True):
+    if (update.message.message_thread_id == 12 and lood_flag == True):
         if current_balance <= 0:
             await context.bot.send_message(chat_id=update.effective_chat.id,
                                            text=f'Недостаточный баланс для игры. Ваш текущий баланс: {current_balance}',
