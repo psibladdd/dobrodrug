@@ -60,7 +60,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             elif dice.value == 3:
                 new_balance = current_balance + 4
                 mess = f'Отличный бросок. \n @{user_name} получает 4 очка! \n Баланс @{user_name}: {new_balance}'
-            elif dice.value == 4:12
+            elif dice.value == 4:
                 new_balance = current_balance + 6
                 mess = f'Мастерский бросок. \n @{user_name} получает 6 очков! \n Баланс @{user_name}: {new_balance}'
             elif dice.value == 5:
@@ -257,7 +257,7 @@ async def send_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         return
     args = context.args
     message_text = ' '.join(args)
-    target_chat_id = '2171062047'  # Замените на ID целевого чата
+    target_chat_id = '-2171062047'  # Замените на ID целевого чата
 
     await context.bot.send_message(chat_id=target_chat_id, text=message_text, message_thread_id=12)
     await context.bot.send_message(chat_id=update.effective_chat.id, text='Сообщение отправлено.')
@@ -302,7 +302,7 @@ async def check_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         user_name = update.message.from_user.username
         cursor.execute('UPDATE users SET balance = balance + ? WHERE username = ?', (quiz_points, user_name))
         conn.commit()
-        await context.bot.send_message(chat_id="2171062047", text=f"@{user_name} угадал первый и получает {quiz_points} очков.", reply_to_message_id=update.message.message_id,message_thread_id=12)
+        await context.bot.send_message(chat_id="-2171062047", text=f"@{user_name} угадал первый и получает {quiz_points} очков.", reply_to_message_id=update.message.message_id,message_thread_id=12)
 
         # Сброс состояния квиза
         quiz_word = None
