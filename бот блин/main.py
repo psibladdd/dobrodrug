@@ -1,6 +1,10 @@
 import logging
 import sqlite3
 import time
+
+import asyncio
+import schedule
+from apscheduler.schedulers.blocking import BlockingScheduler
 import random
 
 from telegram import *
@@ -51,9 +55,9 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         time.sleep(2)
         if dice.emoji == '🎲':  # Кубик
             if dice.value == 1:
-                new_balance = current_balance - 50
+                new_balance = current_balance - 30
                 if (new_balance < 0): new_balance = 0
-                mess = f'КРИТИЧЕСКАЯ НЕУДАЧА ❗️😫 \n @{user_name} теряет 50 очков! \n Баланс @{user_name}: {new_balance}'
+                mess = f'КРИТИЧЕСКАЯ НЕУДАЧА ❗️😫 \n @{user_name} теряет 30 очков! \n Баланс @{user_name}: {new_balance}'
             elif dice.value == 2:
                 new_balance = current_balance + 2
                 mess = f'Неплохой бросок. \n @{user_name} получает 2 очка! \n Баланс @{user_name}: {new_balance}'
@@ -67,8 +71,8 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 new_balance = current_balance + 8
                 mess = f'Офигенный бросок! \n @{user_name} получает 8 очков! \n Баланс @{user_name}: {new_balance}'
             elif dice.value == 6:
-                new_balance = current_balance + 10
-                mess = f'ЧТО ОН ТВОРИТ 🤯!!?? \n @{user_name} получает 10 очков! \n Баланс @{user_name}: {new_balance}'
+                new_balance = current_balance + 15
+                mess = f'ЧТО ОН ТВОРИТ 🤯!!?? \n @{user_name} получает 15 очков! \n Баланс @{user_name}: {new_balance}'
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
             await context.bot.send_message(chat_id=update.effective_chat.id,reply_to_message_id=update.message.message_id,
@@ -197,11 +201,31 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='Вы уже зарегистрированы.',
                                        message_thread_id=12)
     else:
-        cursor.execute('INSERT INTO users (ID, name, balance, username) VALUES (?, ?, ?, ?)',
-                       (user_id, first_name, 1500, user_name))
+        if user_name is None:
+            user_name = first_name
+            cursor.execute('INSERT INTO users (ID, name, balance, username) VALUES (?, ?, ?, ?)',
+                           (user_id, first_name, 1500, user_name))
+        else:
+            cursor.execute('INSERT INTO users (ID, name, balance, username) VALUES (?, ?, ?, ?)',
+                        (user_id, first_name, 1500, user_name))
         conn.commit()
         await context.bot.send_message(chat_id=update.effective_chat.id, text='Вы успешно зарегистрированы!',
                                        message_thread_id=12)
+
+def get_top_users():
+    cursor.execute('SELECT username, balance FROM users ORDER BY balance DESC LIMIT 10')
+    top_users = cursor.fetchall()
+    return top_users
+
+
+async def send_top_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    top_users = get_top_users()
+    print("хуй")
+    message = "Топ 10 пользователей по очкам:\n"
+    for i, (username, balance) in enumerate(top_users, start=1):
+        message += f"{i}. {username}: {balance}\n"
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=message, message_thread_id=12)
+
 
 async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     print(update.effective_chat.id)
@@ -264,6 +288,7 @@ async def send_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
 quiz_word = None
 quiz_points = None
+schedule.every().day.at("23:10").do(send_top_users)
 
 async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global quiz_word, quiz_points
@@ -299,8 +324,11 @@ async def check_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     user_answer = update.message.text.lower()
 
     if user_answer == quiz_word:
+        user_id = update.message.from_user.id
         user_name = update.message.from_user.username
-        cursor.execute('UPDATE users SET balance = balance + ? WHERE username = ?', (quiz_points, user_name))
+
+        cursor.execute('UPDATE users SET balance = balance + ? WHERE id = ?', (quiz_points, user_id))
+
         conn.commit()
         await context.bot.send_message(chat_id="-1002171062047", text=f"@{user_name} угадал первый и получает {quiz_points} очков.", reply_to_message_id=update.message.message_id,message_thread_id=12)
 
@@ -339,8 +367,9 @@ def main():
     application.add_handler(CommandHandler('write', send_message))
     application.add_handler(CommandHandler('quiz', quiz))
     application.add_handler(CommandHandler('lood', lood))
+    application.add_handler(CommandHandler('top', send_top_users))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
-
+    schedule.run_pending()
     application.run_polling()
 
 if __name__ == '__main__':
