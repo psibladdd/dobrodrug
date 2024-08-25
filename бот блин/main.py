@@ -2,9 +2,8 @@ import logging
 import sqlite3
 import time
 
-import asyncio
-import schedule
-from apscheduler.schedulers.blocking import BlockingScheduler
+#import asyncio
+#import schedule
 import random
 
 from telegram import *
@@ -288,7 +287,7 @@ async def send_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
 quiz_word = None
 quiz_points = None
-schedule.every().day.at("23:10").do(send_top_users)
+#schedule.every().day.at("23:10").do(send_top_users)
 
 async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global quiz_word, quiz_points
@@ -369,7 +368,7 @@ def main():
     application.add_handler(CommandHandler('lood', lood))
     application.add_handler(CommandHandler('top', send_top_users))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
-    schedule.run_pending()
+    #schedule.run_pending()
     application.run_polling()
 
 if __name__ == '__main__':
