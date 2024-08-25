@@ -175,7 +175,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             else:
                 new_balance = current_balance - 20
                 if (new_balance < 0): new_balance = 0
-                mess = f'{dice.value}Удача покинула тебя 😔 \n @{user_name} теряет 20 очков! \n Баланс @{user_name}: {new_balance}'
+                mess = f'Удача покинула тебя 😔 \n @{user_name} теряет 20 очков! \n Баланс @{user_name}: {new_balance}'
 
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
@@ -211,7 +211,7 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     user_name = update.message.from_user.username
-    if user_name not in ['hlebnastole', 'why_dyrachyo']:
+    if user_name not in ['hlebnastole', 'why_dyrachyo', 'sdmfy']:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='У вас нет доступа к этой программе')
         return
 
