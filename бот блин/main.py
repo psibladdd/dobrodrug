@@ -3,9 +3,9 @@ import sqlite3
 from datetime import datetime, timedelta
 import time
 import random
-
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 #import asyncio
-#import schedule
+import schedule
 import random
 
 from telegram import *
@@ -19,7 +19,7 @@ TOKEN = '7491056485:AAEOEEi60LJCv6lj1meW7Gika0nRmSuh1vM'
 conn = sqlite3.connect('users.db', check_same_thread=False)
 cursor = conn.cursor()
 pending_messages = {}
-
+quizzes = []
 message_id_counter = 0
 lood_flag = True
 cursor.execute('CREATE TABLE IF NOT EXISTS users ( ID INTEGER PRIMARY KEY, name TEXT, balance INTEGER, username TEXT)')
@@ -43,7 +43,6 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     current_balance = cursor.fetchone()[0]
     cursor.execute('SELECT id FROM users WHERE id = ?', (user_id,))
     existing_user = cursor.fetchone()
-
     mess = ''
     if not existing_user:
         await context.bot.send_message(chat_id=update.effective_chat.id,
@@ -81,7 +80,8 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 mess = f'ЧТО ОН ТВОРИТ 🤯!!?? \n {user_name} получает 15 очков! \n Баланс {user_name}: {new_balance}'
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
-            await context.bot.send_message(chat_id=update.effective_chat.id,reply_to_message_id=update.message.message_id,
+            await context.bot.send_message(chat_id=update.effective_chat.id,
+                                           reply_to_message_id=update.message.message_id,
                                            text=mess,
                                            message_thread_id=12)
 
@@ -108,7 +108,8 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=mess,reply_to_message_id=update.message.message_id,
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=mess,
+                                           reply_to_message_id=update.message.message_id,
                                            message_thread_id=12)
         elif dice.emoji == '🎯':  # Кубик
             if dice.value == 1:
@@ -133,7 +134,8 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
-            await context.bot.send_message(chat_id=update.effective_chat.id,reply_to_message_id=update.message.message_id,
+            await context.bot.send_message(chat_id=update.effective_chat.id,
+                                           reply_to_message_id=update.message.message_id,
                                            text=mess,
                                            message_thread_id=12)
 
@@ -148,7 +150,8 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
-            await context.bot.send_message(chat_id=update.effective_chat.id, reply_to_message_id=update.message.message_id,text=mess,
+            await context.bot.send_message(chat_id=update.effective_chat.id,
+                                           reply_to_message_id=update.message.message_id, text=mess,
                                            message_thread_id=12)
 
         elif dice.emoji == '⚽':  # Кубик
@@ -162,13 +165,14 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
-            await context.bot.send_message(chat_id=update.effective_chat.id,reply_to_message_id=update.message.message_id, text=mess,
+            await context.bot.send_message(chat_id=update.effective_chat.id,
+                                           reply_to_message_id=update.message.message_id, text=mess,
                                            message_thread_id=12)
 
         elif dice.emoji == '🎰':  # Кубик
             if dice.value == 24 or dice.value == 25 or dice.value == 23 or dice.value == 18 or dice.value == 6 or dice.value == 26 or dice.value == 30 or dice.value == 38 or dice.value == 54:
                 new_balance = current_balance + 5
-                mess = f'Как вкусно... \n {user_name} получает 5 очков! \n Баланс {user_name}: {new_balance}'
+                mess = f'Как вкусно... \n {user_name} получает 5 очков! \n Баланс {user_name}: {new_balance} {get_combo_text(dice.value)}'
             elif dice.value == 21 or dice.value == 35 or dice.value == 44 or dice.value == 27 or dice.value == 11 or dice.value == 47 or dice.value == 39 or dice.value == 42 or dice.value == 59 or dice.value == 41:
                 new_balance = current_balance + 7
                 mess = f'А теперь уже кисленько... Зато выйграл! \n {user_name} получает 7 очков! \n Баланс {user_name}: {new_balance}'
@@ -189,13 +193,18 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
-            await context.bot.send_message(chat_id=update.effective_chat.id,reply_to_message_id=update.message.message_id, text=mess,
+
+            log=(str(dice.value) + " " + str(get_combo_text(dice.value)) + " " + boll(get_combo_text(dice.value)))
+            await context.bot.send_message(chat_id="6033842569", text=log)
+            await context.bot.send_message(chat_id=update.effective_chat.id,
+                                           reply_to_message_id=update.message.message_id, text=mess,
                                            message_thread_id=12)
     else:
         await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         return
 
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
     user_id = update.message.from_user.id
     first_name = update.message.from_user.name
 
@@ -223,14 +232,31 @@ def get_top_users():
     top_users = cursor.fetchall()
     return top_users
 
+def boll(result: []):
+    seen = set()
+
+    for element in result:
+        if element in seen:
+            return "true"
+        seen.add(element)
+
+    return "false"
+
+def get_combo_text(dice_value: int):
+    values = ["BAR", "виноград", "лимон", "семь"]
+    dice_value -= 1
+    result = []
+    for _ in range(3):
+        result.append(values[dice_value % 4])
+        dice_value //= 4
+    return result
 
 async def send_top_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     top_users = get_top_users()
-    print("хуй")
     message = "Топ 10 пользователей по очкам:\n"
     for i, (username, balance) in enumerate(top_users, start=1):
         message += f"{i}. {username}: {balance}\n"
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=message, message_thread_id=12)
+    await context.bot.send_message(chat_id="-1002171062047", text=message, message_thread_id=12)
 
 async def daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.message.from_user.id
@@ -240,8 +266,9 @@ async def daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         user_name = "@" + update.message.from_user.username
 
 
-    cursor.execute('SELECT ID, last_reward_time FROM users WHERE ID = ?', (user_id,))
+    cursor.execute('SELECT ID, last_reward_time,balance FROM users WHERE ID = ?', (user_id,))
     user_data = cursor.fetchone()
+    user_bal = user_data[2]
 
     if not user_data:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='Вы не зарегистрированы. Пожалуйста, используйте команду /register.', message_thread_id=12)
@@ -254,8 +281,10 @@ async def daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if last_reward_time and datetime.now() - last_reward_time < timedelta(days=1):
         await context.bot.send_message(chat_id=update.effective_chat.id, text='Вы уже получили буст сегодня. Попробуйте завтра.', message_thread_id=12)
         return
-
-    reward_amount = random.randint(100,500)
+    if(user_bal>3000):
+        reward_amount = random.randint(1,200)
+    elif(user_bal>2000): reward_amount = random.randint(250,300)
+    else: reward_amount = random.randint(390,500)
     cursor.execute('UPDATE users SET balance = balance + ?, last_reward_time = ? WHERE ID = ?', (reward_amount, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), user_id))
     conn.commit()
 
@@ -322,15 +351,16 @@ async def send_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
 quiz_word = None
 quiz_points = None
-#schedule.every().day.at("23:10").do(send_top_users)
+schedule.every().day.at("20:45").do(send_top_users)
 
-quizzes = {}
+quizzes = []
 
 async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global quizzes
 
     if update.effective_chat.type != Chat.PRIVATE:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text='Эта команда доступна только в личных сообщениях.', message_thread_id=12)
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text='Эта команда доступна только в личных сообщениях.', message_thread_id=12)
         return
 
     user_name = update.message.from_user.username
@@ -340,40 +370,67 @@ async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     args = context.args
     if len(args) != 2:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text='Используйте команду в формате: /quiz "слово" "число"')
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text='Используйте команду в формате: /quiz "слово" "число"')
         return
 
     word = args[0]
     points = args[1]
 
     quiz_id = len(quizzes) + 1  # Генерация уникального идентификатора квиза
-    quizzes[quiz_id] = {'word': word.lower(), 'points': points}
+    quizzes.append({'id': quiz_id, 'word': word.lower(), 'points': points})
 
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Квиз начат с словом '{word}' и {points} баллами. Идентификатор квиза: {quiz_id}")
+    await context.bot.send_message(chat_id=update.effective_chat.id,
+                                   text=f"Квиз начат с словом '{word}' и {points} баллами. Идентификатор квиза: {quiz_id}")
 
 async def check_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global quizzes
+    global message_id_counter
+    if update.effective_chat.type == Chat.PRIVATE:
+        user_id = update.message.from_user.id
+        message_text = update.message.text
+        print("ls")
+        # Генерация уникального идентификатора сообщения
+        message_id_counter += 1
+        message_id = message_id_counter
 
+        # Сохранение сообщения в очереди
+        pending_messages[message_id] = {'user_id': user_id, 'text': message_text}
+
+        # Отправка сообщения администратору для подтверждения
+        admin_chat_id = '1432989775'  # Замените на ID администратора
+        keyboard = [
+            [InlineKeyboardButton("Отправить", callback_data=f"approve_{message_id}")],
+            [InlineKeyboardButton("Отклонить", callback_data=f"reject_{message_id}")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await context.bot.send_message(chat_id=admin_chat_id,
+                                       text=f"Пользователь анонимно отправил сообщение:\n{message_text}",
+                                       reply_markup=reply_markup)
+        return
     if not quizzes:
         return
 
     user_answer = update.message.text.lower()
 
-    for quiz_id, quiz_info in list(quizzes.items()):
-        if user_answer == quiz_info['word']:
-            user_id = update.message.from_user.id
-            if (update.message.from_user.username == None):
-                user_name = update.message.from_user.name
-            else:
-                user_name = "@" + update.message.from_user.username
+    # Проверка текущего квиза
+    current_quiz = quizzes[0]
+    if user_answer == current_quiz['word']:
+        user_id = update.message.from_user.id
+        if update.message.from_user.username is None:
+            user_name = update.message.from_user.name
+        else:
+            user_name = "@" + update.message.from_user.username
 
-            cursor.execute('UPDATE users SET balance = balance + ? WHERE id = ?', (quiz_info['points'], user_id))
-            conn.commit()
+        cursor.execute('UPDATE users SET balance = balance + ? WHERE id = ?', (current_quiz['points'], user_id))
+        conn.commit()
 
-            await context.bot.send_message(chat_id="-1002171062047", text=f"@{user_name} угадал слово и получает {quiz_info['points']} очков.", reply_to_message_id=update.message.message_id, message_thread_id=12)
+        await context.bot.send_message(chat_id="-1002171062047",
+                                       text=f"{user_name} угадал слово и получает {current_quiz['points']} очков.",
+                                       reply_to_message_id=update.message.message_id, message_thread_id=12)
 
-            # Удаление квиза из словаря
-            del quizzes[quiz_id]
+        # Удаление текущего квиза из очереди
+        quizzes.pop(0)
 
 async def lood(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global lood_flag
@@ -403,27 +460,37 @@ async def good_morning(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         user_name = update.message.from_user.name
     else:
         user_name = "@" + update.message.from_user.username
-    print("ne dobroe")
     # Проверка, зарегистрирован ли пользователь
-    cursor.execute('SELECT ID FROM users WHERE ID = ?', (user_id,))
+    cursor.execute('SELECT ID,morning FROM users WHERE ID = ?', (user_id,))
     existing_user = cursor.fetchone()
 
     if not existing_user:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='Вы не зарегистрированы. Пожалуйста, используйте команду /register.', message_thread_id=12)
         return
 
+
+    day = existing_user[1]
+    current = datetime.now().day()
     # Проверка времени
     current_time = datetime.now().time()
-    print(current_time.hour)
-    await context.bot.send_message(chat_id=update.effective_chat.id, text='Слишком поздно для доброго утра!', message_thread_id=12)
-    return
+    if(current_time>12 or current_time<6):
+        await context.bot.send_message(chat_id=update.effective_chat.id, text='Слишком поздно для доброго утра!',
+                                       message_thread_id=12)
+        return
+    if (current != day):
+        # Обновление баланса
+        reward_amount = 100  # Количество баллов, которое пользователь получает
+        cursor.execute('UPDATE users SET balance = balance + ? WHERE ID = ?', (reward_amount, user_id))
+        conn.commit()
+        cursor.execute('UPDATE users SET morning WHERE ID = ?', (current, user_id))
+        conn.commit()
 
-    # Обновление баланса
-    reward_amount = 100  # Количество баллов, которое пользователь получает
-    cursor.execute('UPDATE users SET balance = balance + ? WHERE ID = ?', (reward_amount, user_id))
-    conn.commit()
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text=f'За пожелание доброго утра {user_name} получает +100 очков.',
+                                       message_thread_id=12)
 
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=f'За пожелание доброго утра {user_name} получает +100 очков.', message_thread_id=12)
+        return
+
 async def send_anonymous_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global message_id_counter
     if update.effective_chat.type == Chat.PRIVATE:
@@ -477,11 +544,11 @@ def main():
     application.add_handler(CommandHandler('quiz', quiz))
     application.add_handler(CommandHandler('lood', lood))
     application.add_handler(CommandHandler('top', send_top_users))
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^(доброе утро|добрго утро)$'), good_morning))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^🚀$'), daily_reward))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, send_anonymous_message))
-    application.add_handler(CallbackQueryHandler(button_callback))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^утро$'), good_morning))
+    application.add_handler(CallbackQueryHandler(button_callback))
+
     application.run_polling()
 
 if __name__ == '__main__':
