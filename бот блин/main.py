@@ -18,6 +18,9 @@ SELECT_USER, ENTER_BALANCE, SEND_MESSAGE = range(3)
 TOKEN = '7491056485:AAEOEEi60LJCv6lj1meW7Gika0nRmSuh1vM'
 conn = sqlite3.connect('users.db', check_same_thread=False)
 cursor = conn.cursor()
+pending_messages = {}
+
+message_id_counter = 0
 lood_flag = True
 cursor.execute('CREATE TABLE IF NOT EXISTS users ( ID INTEGER PRIMARY KEY, name TEXT, balance INTEGER, username TEXT)')
 
@@ -58,9 +61,9 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         time.sleep(2)
         if dice.emoji == '🎲':  # Кубик
             if dice.value == 1:
-                new_balance = current_balance - 30
+                new_balance = current_balance - 20
                 if (new_balance < 0): new_balance = 0
-                mess = f'КРИТИЧЕСКАЯ НЕУДАЧА ❗️😫 \n {user_name} теряет 30 очков! \n Баланс {user_name}: {new_balance}'
+                mess = f'КРИТИЧЕСКАЯ НЕУДАЧА ❗️😫 \n {user_name} теряет 20 очков! \n Баланс {user_name}: {new_balance}'
             elif dice.value == 2:
                 new_balance = current_balance + 2
                 mess = f'Неплохой бросок. \n {user_name} получает 2 очка! \n Баланс {user_name}: {new_balance}'
@@ -84,9 +87,9 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
         elif dice.emoji == '🎳':  # Кубик
             if dice.value == 1:
-                new_balance = current_balance - 15
+                new_balance = current_balance - 20
                 if (new_balance < 0): new_balance = 0
-                mess = f'КРИТИЧЕСКАЯ НЕУДАЧА ❗️😫  \n {user_name} теряет 15 очков! \n Баланс {user_name}: {new_balance}'
+                mess = f'КРИТИЧЕСКАЯ НЕУДАЧА ❗️😫  \n {user_name} теряет 20 очков! \n Баланс {user_name}: {new_balance}'
             elif dice.value == 2:
                 new_balance = current_balance + 1
                 mess = f'И это всё на что ты способен ?🤨 \n {user_name} получает 1 очко! \n Баланс {user_name}: {new_balance}'
@@ -421,6 +424,47 @@ async def good_morning(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     conn.commit()
 
     await context.bot.send_message(chat_id=update.effective_chat.id, text=f'За пожелание доброго утра {user_name} получает +100 очков.', message_thread_id=12)
+async def send_anonymous_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    global message_id_counter
+    if update.effective_chat.type == Chat.PRIVATE:
+        user_id = update.message.from_user.id
+        message_text = update.message.text
+
+        # Генерация уникального идентификатора сообщения
+        message_id_counter += 1
+        message_id = message_id_counter
+
+        # Сохранение сообщения в очереди
+        pending_messages[message_id] = {'user_id': user_id, 'text': message_text}
+
+        # Отправка сообщения администратору для подтверждения
+        admin_chat_id = '1432989775'  # Замените на ID администратора
+        keyboard = [
+            [InlineKeyboardButton("Отправить", callback_data=f"approve_{message_id}")],
+            [InlineKeyboardButton("Отклонить", callback_data=f"reject_{message_id}")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await context.bot.send_message(chat_id=admin_chat_id, text=f"Пользователь анонимно отправил сообщение:\n{message_text}", reply_markup=reply_markup)
+
+async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    query.answer()
+
+    action, message_id = query.data.split('_')
+    message_id = int(message_id)
+
+    if message_id not in pending_messages:
+        await context.bot.send_message(chat_id=query.message.chat_id, text="Сообщение не найдено.")
+        return
+
+    if action == 'approve':
+        # Отправка сообщения в чат
+        message_text = pending_messages[message_id]['text']
+        await context.bot.send_message(chat_id="-1002171062047", text=message_text, message_thread_id=16)
+        await context.bot.send_message(chat_id=query.message.chat_id, text=f"Отправлено в чат.")
+    elif action == 'reject':
+        # Отклонение сообщения
+        await context.bot.send_message(chat_id=query.message.chat_id, text=f"Отклонено.")
 
 def main():
     application = ApplicationBuilder().token(TOKEN).build()
@@ -434,9 +478,10 @@ def main():
     application.add_handler(CommandHandler('lood', lood))
     application.add_handler(CommandHandler('top', send_top_users))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^🚀$'), daily_reward))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, send_anonymous_message))
+    application.add_handler(CallbackQueryHandler(button_callback))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
-    #schedule.run_pending()
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^доброе утро$'), good_morning))
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^утро$'), good_morning))
     application.run_polling()
 
 if __name__ == '__main__':
