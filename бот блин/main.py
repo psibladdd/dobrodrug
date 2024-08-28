@@ -35,11 +35,11 @@ WAITING_FOR_OPPONENT, ROLLING_DICE = range(2)
 message_id_counter = 0
 lood_flag = True
 cursor.execute('CREATE TABLE IF NOT EXISTS users ( ID INTEGER PRIMARY KEY, name TEXT, balance INTEGER, username TEXT)')
-
+@log_errors
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await context.bot.send_message(chat_id=update.effective_chat.id,
                                    text='И зачем все это...)', message_thread_id=12)
-
+@log_errors
 async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global lood_flag
     if not lood_flag:
@@ -214,7 +214,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     else:
         await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         return
-
+@log_errors
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     user_id = update.message.from_user.id
@@ -238,12 +238,12 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         conn.commit()
         await context.bot.send_message(chat_id=update.effective_chat.id, text='Вы успешно зарегистрированы!',
                                        message_thread_id=12)
-
+@log_errors
 def get_top_users():
     cursor.execute('SELECT username, balance FROM users ORDER BY balance DESC LIMIT 10')
     top_users = cursor.fetchall()
     return top_users
-
+@log_errors
 def boll(result: []):
     seen = set()
 
@@ -253,7 +253,7 @@ def boll(result: []):
         seen.add(element)
 
     return "false"
-
+@log_errors
 def get_combo_text(dice_value: int):
     values = ["BAR", "виноград", "лимон", "семь"]
     dice_value -= 1
@@ -262,14 +262,14 @@ def get_combo_text(dice_value: int):
         result.append(values[dice_value % 4])
         dice_value //= 4
     return result
-
+@log_errors
 async def send_top_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     top_users = get_top_users()
     message = "Топ 10 пользователей по очкам:\n"
     for i, (username, balance) in enumerate(top_users, start=1):
         message += f"{i}. {username}: {balance}\n"
     await context.bot.send_message(chat_id="-1002171062047", text=message, message_thread_id=12)
-
+@log_errors
 async def daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.message.from_user.id
     if (update.message.from_user.username == None):
@@ -301,7 +301,7 @@ async def daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     conn.commit()
 
     await context.bot.send_message(chat_id=update.effective_chat.id, text=f'Буст для {user_name} на сегодня {reward_amount} очков', message_thread_id=12)
-
+@log_errors
 async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_chat.type != Chat.PRIVATE:
         await context.bot.send_message(chat_id=update.effective_chat.id,
@@ -342,7 +342,7 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     bal = cursor.fetchone()[0]
     await context.bot.send_message(chat_id=update.effective_chat.id,
                                    text=f'Баланс пользователя {target_username} теперь {bal}.')
-
+@log_errors
 async def send_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.effective_chat.type != Chat.PRIVATE:
         await context.bot.send_message(chat_id=update.effective_chat.id,
@@ -377,7 +377,7 @@ quiz_points = None
 schedule.every().day.at("20:45").do(send_top_users)
 
 quizzes = []
-
+@log_errors
 async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global quizzes
 
@@ -405,7 +405,7 @@ async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     await context.bot.send_message(chat_id=update.effective_chat.id,
                                    text=f"Квиз начат с словом '{word}' и {points} баллами. Идентификатор квиза: {quiz_id}")
-
+@log_errors
 async def check_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global quizzes
     global message_id_counter
@@ -453,7 +453,7 @@ async def check_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
         # Удаление текущего квиза из очереди
         quizzes.pop(0)
-
+@log_errors
 async def lood(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global lood_flag
     if update.effective_chat.type != Chat.PRIVATE:
@@ -475,7 +475,7 @@ async def lood(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='Возможные параметры команды Y/N')
 
-
+@log_errors
 async def good_morning(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.message.from_user.id
     if (update.message.from_user.username == None):
@@ -512,7 +512,7 @@ async def good_morning(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
                                        message_thread_id=12)
 
         return
-
+@log_errors
 async def send_anonymous_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global message_id_counter
     if update.effective_chat.type == Chat.PRIVATE and update.message.from_user.username == 'hlebnastole':
@@ -545,7 +545,7 @@ async def send_anonymous_message(update: Update, context: ContextTypes.DEFAULT_T
             await context.bot.send_photo(chat_id=admin_chat_id, photo=photo_file_id, caption=f"Пользователь анонимно отправил сообщение:\n{message_text}", reply_markup=reply_markup)
         else:
             await context.bot.send_message(chat_id=admin_chat_id, text=f"Пользователь анонимно отправил сообщение:\n{message_text}", reply_markup=reply_markup)
-
+@log_errors
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     query.answer()
@@ -572,7 +572,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     # Удаление сообщения из очереди
     pending_messages.pop(message_id, None)
-
+@log_errors
 async def duels(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     global duel_info
@@ -656,7 +656,7 @@ async def duels(update: Update, context: ContextTypes.DEFAULT_TYPE):
         duel_info.clear()
 
 
-
+@log_errors
 def main():
     application = ApplicationBuilder().token(TOKEN).build()
 
@@ -678,6 +678,6 @@ def main():
     application.add_handler(CallbackQueryHandler(button_callback))
 
     application.run_polling()
-
+@log_errors
 if __name__ == '__main__':
     main()
