@@ -14,7 +14,15 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',  # Формат записи
     datefmt='%Y-%m-%d %H:%M:%S'  # Формат даты и времени
 )
-
+# Декоратор для логирования ошибок
+def log_errors(func):
+    async def wrapper(*args, **kwargs):
+        try:
+            return await func(*args, **kwargs)
+        except Exception as e:
+            logging.error(f"Ошибка в функции {func.__name__}: {e}")
+            raise
+    return wrapper
 SELECT_USER, ENTER_BALANCE, SEND_MESSAGE = range(3)
 TOKEN = '7491056485:AAEOEEi60LJCv6lj1meW7Gika0nRmSuh1vM'
 conn = sqlite3.connect('users.db', check_same_thread=False)
