@@ -8,7 +8,12 @@ from telegram import *
 from telegram.ext import *
 import json
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    filename='errors.txt',  # Имя файла для записи ошибок
+    level=logging.ERROR,  # Уровень логирования (в данном случае, только ошибки)
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',  # Формат записи
+    datefmt='%Y-%m-%d %H:%M:%S'  # Формат даты и времени
+)
 
 SELECT_USER, ENTER_BALANCE, SEND_MESSAGE = range(3)
 TOKEN = '7491056485:AAEOEEi60LJCv6lj1meW7Gika0nRmSuh1vM'
