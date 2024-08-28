@@ -2,12 +2,8 @@ import logging
 import sqlite3
 from datetime import datetime, timedelta
 import time
-import random
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-#import asyncio
 import schedule
 import random
-
 from telegram import *
 from telegram.ext import *
 import json
@@ -20,6 +16,9 @@ conn = sqlite3.connect('users.db', check_same_thread=False)
 cursor = conn.cursor()
 pending_messages = {}
 quizzes = []
+duel_info = []
+result = []
+WAITING_FOR_OPPONENT, ROLLING_DICE = range(2)
 message_id_counter = 0
 lood_flag = True
 cursor.execute('CREATE TABLE IF NOT EXISTS users ( ID INTEGER PRIMARY KEY, name TEXT, balance INTEGER, username TEXT)')
@@ -172,7 +171,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         elif dice.emoji == '🎰':  # Кубик
             if dice.value == 24 or dice.value == 25 or dice.value == 23 or dice.value == 18 or dice.value == 6 or dice.value == 26 or dice.value == 30 or dice.value == 38 or dice.value == 54:
                 new_balance = current_balance + 5
-                mess = f'Как вкусно... \n {user_name} получает 5 очков! \n Баланс {user_name}: {new_balance} {get_combo_text(dice.value)}'
+                mess = f'Как вкусно... \n {user_name} получает 5 очков! \n Баланс {user_name}: {new_balance}'
             elif dice.value == 21 or dice.value == 35 or dice.value == 44 or dice.value == 27 or dice.value == 11 or dice.value == 47 or dice.value == 39 or dice.value == 42 or dice.value == 59 or dice.value == 41:
                 new_balance = current_balance + 7
                 mess = f'А теперь уже кисленько... Зато выйграл! \n {user_name} получает 7 очков! \n Баланс {user_name}: {new_balance}'
@@ -291,7 +290,6 @@ async def daily_reward(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await context.bot.send_message(chat_id=update.effective_chat.id, text=f'Буст для {user_name} на сегодня {reward_amount} очков', message_thread_id=12)
 
 async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    print(update.effective_chat.id)
     if update.effective_chat.type != Chat.PRIVATE:
         await context.bot.send_message(chat_id=update.effective_chat.id,
                                        text='Эта команда доступна только в личных сообщениях.', message_thread_id=12)
@@ -342,12 +340,24 @@ async def send_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     if user_name not in ['hlebnastole', 'why_dyrachyo', 'sdmfy']:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='У вас нет доступа к этой команде')
         return
-    args = context.args
-    message_text = ' '.join(args)
+
     target_chat_id = '-1002171062047'  # Замените на ID целевого чата
 
-    await context.bot.send_message(chat_id=target_chat_id, text=message_text, message_thread_id=12)
+    # Проверяем, есть ли в сообщении изображение
+    if update.message.photo:
+        # Получаем последнее изображение из списка фотографий
+        photo = update.message.photo[-1]
+        photo_file = await photo.get_file()
+
+        # Отправляем изображение в целевой чат
+        await context.bot.send_photo(chat_id=target_chat_id, photo=photo_file.file_id, caption=update.message.caption, message_thread_id=12)
+    else:
+        # Отправляем текстовое сообщение в целевой чат
+        message_text = ' '.join(context.args)
+        await context.bot.send_message(chat_id=target_chat_id, text=message_text, message_thread_id=12)
+
     await context.bot.send_message(chat_id=update.effective_chat.id, text='Сообщение отправлено.')
+
 
 quiz_word = None
 quiz_points = None
@@ -389,7 +399,6 @@ async def check_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if update.effective_chat.type == Chat.PRIVATE:
         user_id = update.message.from_user.id
         message_text = update.message.text
-        print("ls")
         # Генерация уникального идентификатора сообщения
         message_id_counter += 1
         message_id = message_id_counter
@@ -470,9 +479,9 @@ async def good_morning(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
     day = existing_user[1]
-    current = datetime.now().day()
+    current = datetime.now().day
     # Проверка времени
-    current_time = datetime.now().time()
+    current_time = datetime.now().time().hour
     if(current_time>12 or current_time<6):
         await context.bot.send_message(chat_id=update.effective_chat.id, text='Слишком поздно для доброго утра!',
                                        message_thread_id=12)
@@ -482,7 +491,7 @@ async def good_morning(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         reward_amount = 100  # Количество баллов, которое пользователь получает
         cursor.execute('UPDATE users SET balance = balance + ? WHERE ID = ?', (reward_amount, user_id))
         conn.commit()
-        cursor.execute('UPDATE users SET morning WHERE ID = ?', (current, user_id))
+        cursor.execute('UPDATE users SET morning = ? WHERE ID = ?', (current, user_id))
         conn.commit()
 
         await context.bot.send_message(chat_id=update.effective_chat.id,
@@ -493,16 +502,23 @@ async def good_morning(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def send_anonymous_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global message_id_counter
-    if update.effective_chat.type == Chat.PRIVATE:
+    if update.effective_chat.type == Chat.PRIVATE and update.message.from_user.username == 'hlebnastole':
         user_id = update.message.from_user.id
         message_text = update.message.text
+        photo = None
+
+        # Проверяем, есть ли в сообщении изображение
+        if update.message.photo:
+            photo = update.message.photo[-1]
+            photo_file = await photo.get_file()
+            photo_file_id = photo_file.file_id
 
         # Генерация уникального идентификатора сообщения
         message_id_counter += 1
         message_id = message_id_counter
 
         # Сохранение сообщения в очереди
-        pending_messages[message_id] = {'user_id': user_id, 'text': message_text}
+        pending_messages[message_id] = {'user_id': user_id, 'text': message_text, 'photo_file_id': photo_file_id if photo else None}
 
         # Отправка сообщения администратору для подтверждения
         admin_chat_id = '1432989775'  # Замените на ID администратора
@@ -511,7 +527,11 @@ async def send_anonymous_message(update: Update, context: ContextTypes.DEFAULT_T
             [InlineKeyboardButton("Отклонить", callback_data=f"reject_{message_id}")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await context.bot.send_message(chat_id=admin_chat_id, text=f"Пользователь анонимно отправил сообщение:\n{message_text}", reply_markup=reply_markup)
+
+        if photo:
+            await context.bot.send_photo(chat_id=admin_chat_id, photo=photo_file_id, caption=f"Пользователь анонимно отправил сообщение:\n{message_text}", reply_markup=reply_markup)
+        else:
+            await context.bot.send_message(chat_id=admin_chat_id, text=f"Пользователь анонимно отправил сообщение:\n{message_text}", reply_markup=reply_markup)
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -526,12 +546,103 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if action == 'approve':
         # Отправка сообщения в чат
-        message_text = pending_messages[message_id]['text']
-        await context.bot.send_message(chat_id="-1002171062047", text=message_text, message_thread_id=16)
+        message_info = pending_messages[message_id]
+        target_chat_id = "-1002171062047"  # Замените на ID целевого чата
+        if message_info['photo_file_id']:
+            await context.bot.send_photo(chat_id=target_chat_id, photo=message_info['photo_file_id'], caption=f"Новое сообщение от анонимного пользователя:\n{message_info['text']}", message_thread_id=16)
+        else:
+            await context.bot.send_message(chat_id=target_chat_id, text=f"Новое сообщение от анонимного пользователя:\n{message_info['text']}", message_thread_id=16)
         await context.bot.send_message(chat_id=query.message.chat_id, text=f"Отправлено в чат.")
     elif action == 'reject':
         # Отклонение сообщения
         await context.bot.send_message(chat_id=query.message.chat_id, text=f"Отклонено.")
+
+    # Удаление сообщения из очереди
+    pending_messages.pop(message_id, None)
+
+async def duels(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    global duel_info
+
+    if not duel_info:
+        cursor.execute('SELECT balance, username, ID FROM users WHERE ID = ?', (user_id,))
+        first_user = cursor.fetchone()
+
+        if not first_user:
+            await context.bot.send_message(chat_id=update.effective_chat.id,
+                                           text='Вы не зарегистрированы. Пожалуйста, используйте команду /register.',
+                                           message_thread_id=12)
+            return ConversationHandler.END
+
+        if first_user[0] < 25:
+            await context.bot.send_message(chat_id=update.effective_chat.id,
+                                           text='К сожалению вашего баланса не хватает для игры!',
+                                           message_thread_id=12)
+            return ConversationHandler.END
+
+        duel_info.append(first_user)
+        username = first_user[1]
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text=f'{username} пришёл на дуэль. Ожидает соперника. Чтобы выйти на дуэль отправь ⚔️',
+                                       message_thread_id=12)
+    elif user_id != duel_info[0][2]:
+        cursor.execute('SELECT balance, username, ID FROM users WHERE ID = ?', (user_id,))
+        second_user = cursor.fetchone()
+
+        if not second_user:
+            await context.bot.send_message(chat_id=update.effective_chat.id,
+                                           text='Вы не зарегистрированы. Пожалуйста, используйте команду /register.',
+                                           message_thread_id=12)
+            return ConversationHandler.END
+
+        if second_user[0] < 25:
+            await context.bot.send_message(chat_id=update.effective_chat.id,
+                                           text='К сожалению вашего баланса не хватает для игры!',
+                                           message_thread_id=12)
+            return ConversationHandler.END
+
+        duel_info.append(second_user)
+        username_2 = second_user[1]
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text=f'{username_2} и {duel_info[0][1]} дуэляться. У кого больше выпадет на кубике получает +25 очков. У кого меньше -25 очков',
+                                       message_thread_id=12)
+
+        # Бросок кубика для первого игрока
+        await context.bot.send_message(chat_id=update.effective_chat.id, text='Бросок ' + duel_info[0][1] + ':',
+                                       message_thread_id=12)
+        dice_message = await context.bot.send_dice(chat_id=update.effective_chat.id, emoji=Dice.DICE,
+                                                   message_thread_id=12)
+        result = [dice_message.dice.value]
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text='Бросок ' + duel_info[1][1] + ':', message_thread_id=12)
+        # Бросок кубика для второго игрока
+        dice_message = await context.bot.send_dice(chat_id=update.effective_chat.id, emoji=Dice.DICE,
+                                                   message_thread_id=12)
+        result.append(dice_message.dice.value)
+
+        winner = None
+        loser = None
+        if result[0] > result[1]:
+            winner = duel_info[0]
+            loser = duel_info[1]
+        elif result[0] < result[1]:
+            winner = duel_info[1]
+            loser = duel_info[0]
+        else:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=f'Ничья!', message_thread_id=12)
+            duel_info.clear()
+            return
+        time.sleep(3)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f'Победу одержал {winner[1]}!', message_thread_id=12)
+
+        cursor.execute('UPDATE users SET balance = balance + ? WHERE ID = ?', (25, winner[2]))
+        conn.commit()
+        cursor.execute('UPDATE users SET balance = balance - ? WHERE ID = ?', (25, loser[2]))
+        conn.commit()
+
+        duel_info.clear()
+
+
 
 def main():
     application = ApplicationBuilder().token(TOKEN).build()
@@ -544,9 +655,13 @@ def main():
     application.add_handler(CommandHandler('quiz', quiz))
     application.add_handler(CommandHandler('lood', lood))
     application.add_handler(CommandHandler('top', send_top_users))
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^(доброе утро|добрго утро)$'), good_morning))
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^(доброе утро|Доброе утро|Доброго утра|доброго утра|Доброе|доброе)$'), good_morning))
     application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^🚀$'), daily_reward))
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^⚔️$'), duels))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
+
+    application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_message))
+    application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_anonymous_message))
     application.add_handler(CallbackQueryHandler(button_callback))
 
     application.run_polling()
