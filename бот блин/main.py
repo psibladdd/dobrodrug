@@ -2,18 +2,13 @@ import logging
 import sqlite3
 from datetime import datetime, timedelta
 import time
-import schedule
+import asyncio
 import random
 from telegram import *
 from telegram.ext import *
 import json
 
-logging.basicConfig(
-    filename='errors.txt',  # Имя файла для записи ошибок
-    level=logging.ERROR,  # Уровень логирования (в данном случае, только ошибки)
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',  # Формат записи
-    datefmt='%Y-%m-%d %H:%M:%S'  # Формат даты и времени
-)
+
 # Декоратор для логирования ошибок
 
 SELECT_USER, ENTER_BALANCE, SEND_MESSAGE = range(3)
@@ -27,6 +22,7 @@ result = []
 WAITING_FOR_OPPONENT, ROLLING_DICE = range(2)
 message_id_counter = 0
 lood_flag = True
+emoji_count = {}
 cursor.execute('CREATE TABLE IF NOT EXISTS users ( ID INTEGER PRIMARY KEY, name TEXT, balance INTEGER, username TEXT)')
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -41,8 +37,10 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     dice = update.message.dice
 
-    if(update.message.from_user.username == None): user_name = update.message.from_user.name
-    else: user_name = "@" + update.message.from_user.username
+    if update.message.from_user.username is None:
+        user_name = update.message.from_user.name
+    else:
+        user_name = "@" + update.message.from_user.username
     user_id = update.message.from_user.id
     cursor.execute('SELECT balance FROM users WHERE id = ?', (user_id,))
     current_balance = cursor.fetchone()[0]
@@ -55,18 +53,32 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                                        message_thread_id=12)
         return
 
-    if (update.message.message_thread_id == 12 and lood_flag == True):
+    current_time = time.time()
+    user_id = update.effective_user.id
+    if user_id in emoji_count:
+        last_time, count = emoji_count[user_id]
+        if current_time - last_time < 5:
+            if count > 10:
+                await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
+                return
+            else:
+                emoji_count[user_id] = (current_time, count + 1)
+        else:
+            emoji_count[user_id] = (current_time, count - 10)
+    else:
+        emoji_count[user_id] = (current_time, 1)
+    if update.message.message_thread_id == 12 and lood_flag:
         if current_balance <= 0:
             await context.bot.send_message(chat_id=update.effective_chat.id,
                                            text=f'Недостаточный баланс для игры. Ваш текущий баланс: {current_balance}',
                                            message_thread_id=12)
             await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
             return
-        time.sleep(2)
+        await asyncio.sleep(2)
         if dice.emoji == '🎲':  # Кубик
             if dice.value == 1:
                 new_balance = current_balance - 20
-                if (new_balance < 0): new_balance = 0
+                if new_balance < 0: new_balance = 0
                 mess = f'КРИТИЧЕСКАЯ НЕУДАЧА ❗️😫 \n {user_name} теряет 20 очков! \n Баланс {user_name}: {new_balance}'
             elif dice.value == 2:
                 new_balance = current_balance + 2
@@ -93,7 +105,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         elif dice.emoji == '🎳':  # Кубик
             if dice.value == 1:
                 new_balance = current_balance - 20
-                if (new_balance < 0): new_balance = 0
+                if new_balance < 0: new_balance = 0
                 mess = f'КРИТИЧЕСКАЯ НЕУДАЧА ❗️😫  \n {user_name} теряет 20 очков! \n Баланс {user_name}: {new_balance}'
             elif dice.value == 2:
                 new_balance = current_balance + 1
@@ -119,7 +131,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         elif dice.emoji == '🎯':  # Кубик
             if dice.value == 1:
                 new_balance = current_balance - 15
-                if (new_balance < 0): new_balance = 0
+                if new_balance < 0: new_balance = 0
                 mess = f'Мдаа... меткость - не твоё \n {user_name} теряет 15 очков! \n Баланс {user_name}: {new_balance}'
             elif dice.value == 2:
                 new_balance = current_balance + 1
@@ -150,7 +162,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 mess = f'Тебе завидует даже Джордан 😍 \n {user_name} получает 15 очков! \n Баланс {user_name}: {new_balance}'
             elif dice.value < 4:
                 new_balance = current_balance - 20
-                if (new_balance < 0): new_balance = 0
+                if new_balance < 0: new_balance = 0
                 mess = f'Встань поближе и попробуй ещё раз \n {user_name} теряет 20 очков! \n Баланс {user_name}: {new_balance}'
 
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
@@ -165,7 +177,7 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 mess = f'Шиииииш. Отличный удар🥳 \n {user_name} получает 15 очков! \n Баланс {user_name}: {new_balance}'
             elif dice.value < 3:
                 new_balance = current_balance - 20
-                if (new_balance < 0): new_balance = 0
+                if new_balance < 0: new_balance = 0
                 mess = f'Ты как Дантес! Косишь на оба глаза? \n {user_name} теряет 20 очков! \n Баланс {user_name}: {new_balance}'
 
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
@@ -193,13 +205,11 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 mess = f'Джекпот! Удача на твоей стороне 💸 \n {user_name} получает 50 очков! \n Баланс {user_name}: {new_balance}'
             else:
                 new_balance = current_balance - 20
-                if (new_balance < 0): new_balance = 0
+                if new_balance < 0: new_balance = 0
                 mess = f'Удача покинула тебя 😔 \n {user_name} теряет 20 очков! \n Баланс {user_name}: {new_balance}'
 
             cursor.execute('UPDATE users SET balance = ? WHERE id = ?', (new_balance, user_id))
             conn.commit()
-
-            await context.bot.send_message(chat_id="6033842569", text=log)
             await context.bot.send_message(chat_id=update.effective_chat.id,
                                            reply_to_message_id=update.message.message_id, text=mess,
                                            message_thread_id=12)
@@ -365,7 +375,6 @@ async def send_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
 quiz_word = None
 quiz_points = None
-schedule.every().day.at("20:45").do(send_top_users)
 
 quizzes = []
 
@@ -507,7 +516,7 @@ async def good_morning(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 async def send_anonymous_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global message_id_counter
-    if update.effective_chat.type == Chat.PRIVATE and update.message.from_user.username == 'hlebnastole':
+    if update.effective_chat.type == Chat.PRIVATE:
         user_id = update.message.from_user.id
         message_text = update.message.text
         photo = None
@@ -648,7 +657,89 @@ async def duels(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         duel_info.clear()
 
+players = {}
 
+# Колода карт
+deck = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10, 11] * 4
+random.shuffle(deck)
+
+# Функция для раздачи карт
+def deal_card():
+    return deck.pop()
+
+# Функция для подсчета очков
+def calculate_score(hand):
+    score = sum(hand)
+    if score > 21 and 11 in hand:
+        hand.remove(11)
+        hand.append(1)
+        score = sum(hand)
+    return score
+
+# Обработчик команды /start
+
+
+# Обработчик сообщения для присоединения к игре
+async def join_game(update: Update, context: CallbackContext) -> None:
+    print("join")
+    user_id = update.message.from_user.id
+    if user_id not in players:
+        players[user_id] = {
+            'hand': [deal_card(), deal_card()],
+            'score': 0,
+            'username': update.message.from_user.username
+        }
+        await update.message.reply_text(f"@{update.message.from_user.username} присоединился к столу игры в 21.")
+        await context.bot.send_message(update.message.chat.id, "20 секунд до начала игры. Чтобы присоединиться к столу, отправьте '🔖'.")
+        time.sleep(20)
+        await start_game(update.message.chat.id, context)
+
+# Функция для начала игры
+async def start_game(chat_id, context: CallbackContext):
+    print("start game")
+    if players:
+        await context.bot.send_message(chat_id, "Игра в 21 началась.")
+        for user_id, player in players.items():
+            await context.bot.send_message(user_id, f"Твои карты: {player['hand']}")
+            await context.bot.send_message(user_id, "Ещё?", reply_markup=generate_markup())
+            print("else")
+    else:
+        await context.bot.send_message(chat_id, "Никто не присоединился к столу игры в 21. Сорянчик.")
+
+# Функция для генерации клавиатуры
+async def generate_markup():
+    print("gen knopok")
+    keyboard = [
+        [InlineKeyboardButton("Взять ещё", callback_data='hit')],
+        [InlineKeyboardButton("Оставить как есть", callback_data='stand')]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+# Обработчик сообщения для взятия ещё одной карты или остановки
+async def handle_game_action(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    user_id = query.from_user.id
+    if user_id in players:
+        if query.data == 'hit':
+            players[user_id]['hand'].append(deal_card())
+            await query.edit_message_text(f"Твои карты: {players[user_id]['hand']}")
+            if calculate_score(players[user_id]['hand']) > 21:
+                await query.edit_message_text("Ты проиграл.")
+                del players[user_id]
+            else:
+                await query.edit_message_text("Ещё?", reply_markup=generate_markup())
+        elif query.data == 'stand':
+            players[user_id]['score'] = calculate_score(players[user_id]['hand'])
+            await query.edit_message_text(f"Ты остановился с {players[user_id]['score']} очками.")
+            await check_game_over(context)
+
+# Функция для проверки окончания игры
+async def check_game_over(context: CallbackContext):
+    if all(player['score'] != 0 for player in players.values()):
+        winner = max(players.values(), key=lambda x: x['score'])
+        for user_id, player in players.items():
+            await context.bot.send_message(user_id, f"Игра в 21 закончилась.\nПобедитель: @{winner['username']} с {winner['score']} очками.")
+        players.clear()
 def main():
     application = ApplicationBuilder().token(TOKEN).build()
 
@@ -660,11 +751,14 @@ def main():
     application.add_handler(CommandHandler('quiz', quiz))
     application.add_handler(CommandHandler('lood', lood))
     application.add_handler(CommandHandler('top', send_top_users))
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^(доброе утро|Доброе утро|Доброго утра|доброго утра|Доброе|доброе)$'), good_morning))
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^🚀$'), daily_reward))
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^⚔️$'), duels))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
 
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^21$'), join_game))
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^(доброе утро|Доброе утро|Доброго утра|доброго утра|Доброе|доброе)$'), good_morning))
+
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^⚔️$'), duels))
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^🚀$'), daily_reward))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
+    application.add_handler(CallbackQueryHandler(handle_game_action))
     application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_message))
     application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_anonymous_message))
     application.add_handler(CallbackQueryHandler(button_callback))
