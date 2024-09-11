@@ -74,7 +74,11 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                                            message_thread_id=12)
             await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
             return
-        await asyncio.sleep(2)
+        current = datetime.now().second
+        new_current = current + 2
+        if (new_current > 59): new_current = new_current % 60
+        while (datetime.now().second != new_current):
+            pass
         if dice.emoji == '🎲':  # Кубик
             if dice.value == 1:
                 new_balance = current_balance - 20
@@ -687,12 +691,41 @@ async def join_game(update: Update, context: CallbackContext) -> None:
         players[user_id] = {
             'hand': [deal_card(), deal_card()],
             'score': 0,
-            'username': update.message.from_user.username
+            'username': '@' + update.message.from_user.username
         }
-        await update.message.reply_text(f"@{update.message.from_user.username} присоединился к столу игры в 21.")
+        await update.message.reply_text(f"{update.message.from_user.username} присоединился к столу игры в 21.")
         await context.bot.send_message(update.message.chat.id, "20 секунд до начала игры. Чтобы присоединиться к столу, отправьте '🔖'.")
-        time.sleep(20)
+
+        # Запускаем асинхронную задачу для приема новых игроков
+        asyncio.create_task(accept_players(update, context))
+
+async def accept_players(update: Update, context: CallbackContext) -> None:
+    end_time = datetime.now() + timedelta(seconds=20)
+
+    while datetime.now() < end_time:
+        await asyncio.sleep(1)  # Ждем 1 секунду перед проверкой новых сообщений
+
+    usernames = [player['username'] for player in players.values()]
+    players_str = ', '.join(usernames)
+    print(players_str)
+    if len(usernames) == 1:
+        await context.bot.send_message(update.message.chat.id, "К сожалению, игроки не набраны!")
+    else:
         await start_game(update.message.chat.id, context)
+
+async def handle_message(update: Update, context: CallbackContext) -> None:
+    if update.message.text == '21':
+        user_id = update.message.from_user.id
+        if user_id not in players:
+            players[user_id] = {
+                'hand': [deal_card(), deal_card()],
+                'score': 0,
+                'username': '@' + update.message.from_user.username
+            }
+            usernames = [player['username'] for player in players.values()]
+            players_str = ', '.join(usernames)
+            await update.message.reply_text(
+                f"{update.message.from_user.username} присоединился к столу игры в 21.\n За столом: {players_str}")
 
 # Функция для начала игры
 async def start_game(chat_id, context: CallbackContext):
