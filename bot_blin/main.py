@@ -21,10 +21,11 @@ duel_info = []
 result = []
 WAITING_FOR_OPPONENT, ROLLING_DICE = range(2)
 message_id_counter = 0
-lood_flag = True
+lood_flag = False
 emoji_count = {}
 cursor.execute('CREATE TABLE IF NOT EXISTS users ( ID INTEGER PRIMARY KEY, name TEXT, balance INTEGER, username TEXT)')
-
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await context.bot.send_message(chat_id=update.effective_chat.id,
                                    text='И зачем все это...)', message_thread_id=12)
@@ -355,12 +356,11 @@ async def send_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         return
 
     user_name = update.message.from_user.username
-    if user_name not in ['hlebnastole', 'why_dyrachyo', 'sdmfy', 'dydonnya', 'kkcchay']:
+    if user_name not in ['hlebnastole', 'sdmfy', 'why_dyrachyo']:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='У вас нет доступа к этой команде')
         return
 
     target_chat_id = '-1002171062047'  # Замените на ID целевого чата
-
     # Проверяем, есть ли в сообщении изображение
     if update.message.photo:
         # Получаем последнее изображение из списка фотографий
@@ -391,7 +391,7 @@ async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     user_name = update.message.from_user.username
-    if user_name not in ['hlebnastole', 'kkcchay','why_dyrachyo', 'sdmfy', 'dydonnya']:
+    if user_name not in ['hlebnastole', 'why_dyrachyo', 'sdmfy']:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='У вас нет доступа к этой команде')
         return
 
@@ -545,16 +545,13 @@ async def send_anonymous_message(update: Update, context: ContextTypes.DEFAULT_T
             [InlineKeyboardButton("Отклонить", callback_data=f"reject_{message_id}")],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-
-        if photo:
-            await context.bot.send_photo(chat_id=admin_chat_id, photo=photo_file_id, caption=f"Пользователь анонимно отправил сообщение:\n{message_text}", reply_markup=reply_markup)
-        else:
-            await context.bot.send_message(chat_id=admin_chat_id, text=f"Пользователь анонимно отправил сообщение:\n{message_text}", reply_markup=reply_markup)
+        print("dfs")
+        await context.bot.send_message(chat_id=admin_chat_id, text=f"Пользователь анонимно отправил сообщение:\n{message_text}", reply_markup=reply_markup)
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     query.answer()
-
+    print("xfd")
     action, message_id = query.data.split('_')
     message_id = int(message_id)
 
@@ -776,25 +773,25 @@ async def check_game_over(context: CallbackContext):
 def main():
     application = ApplicationBuilder().token(TOKEN).build()
 
-    application.add_handler(CommandHandler('start', start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.Regex('^⚔️$'), duels))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.Regex('^🚀$'), daily_reward))
+    #application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.Regex('^21$'), join_game))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.Regex(
+        '^(доброе утро|Доброе утро|Доброго утра|доброго утра|Доброе|доброе)$'), good_morning))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, send_anonymous_message))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
+    application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_message))
+    application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_anonymous_message))
     application.add_handler(MessageHandler(filters.Dice.ALL, handle_dice))
-    application.add_handler(CommandHandler('register', register))
+    application.add_handler(CallbackQueryHandler(button_callback))
+    application.add_handler(CallbackQueryHandler(handle_game_action))
     application.add_handler(CommandHandler('balance', balance))
     application.add_handler(CommandHandler('write', send_message))
     application.add_handler(CommandHandler('quiz', quiz))
     application.add_handler(CommandHandler('lood', lood))
     application.add_handler(CommandHandler('top', send_top_users))
-
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^21$'), join_game))
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^(доброе утро|Доброе утро|Доброго утра|доброго утра|Доброе|доброе)$'), good_morning))
-
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^⚔️$'), duels))
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^🚀$'), daily_reward))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
-    application.add_handler(CallbackQueryHandler(handle_game_action))
-    application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_message))
-    application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_anonymous_message))
-    application.add_handler(CallbackQueryHandler(button_callback))
+    application.add_handler(CommandHandler('start', start))
+    application.add_handler(CommandHandler('register', register))
 
     application.run_polling()
 if __name__ == '__main__':
