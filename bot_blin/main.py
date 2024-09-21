@@ -54,6 +54,11 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                                        message_thread_id=12)
         return
 
+    if user_name == "@Omagadabal":
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text='@Omagadabal забанен по причине: Ваня Котов попросил',
+                                       message_thread_id=12)
+        return
     current_time = time.time()
     user_id = update.effective_user.id
     if user_id in emoji_count:
