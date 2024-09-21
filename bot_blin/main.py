@@ -349,6 +349,8 @@ async def announce_winners(context: ContextTypes.DEFAULT_TYPE) -> None:
 
             conn.commit()
 
+    await context.bot.send_message(chat_id="-1002171062047", text=f"{balance}")
+
     # Очистка данных для новой игры
     table_users.clear()
     players.clear()
@@ -789,13 +791,121 @@ async def duels(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         duel_info.clear()
 
+players = {}
+
+# Колода карт
+deck = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10, 11] * 4
+random.shuffle(deck)
+
+# Функция для раздачи карт
+def deal_card():
+    return deck.pop()
+
+# Функция для подсчета очков
+def calculate_score(hand):
+    score = sum(hand)
+    if score > 21 and 11 in hand:
+        hand.remove(11)
+        hand.append(1)
+        score = sum(hand)
+    return score
+
+# Обработчик команды /start
+
+
+# Обработчик сообщения для присоединения к игре
+async def join_game(update: Update, context: CallbackContext) -> None:
+    print("join")
+    user_id = update.message.from_user.id
+    if user_id not in players:
+        players[user_id] = {
+            'hand': [deal_card(), deal_card()],
+            'score': 0,
+            'username': '@' + update.message.from_user.username
+        }
+        await update.message.reply_text(f"{update.message.from_user.username} присоединился к столу игры в 21.")
+        await context.bot.send_message(update.message.chat.id, "20 секунд до начала игры. Чтобы присоединиться к столу, отправьте '🔖'.")
+
+        # Запускаем асинхронную задачу для приема новых игроков
+        asyncio.create_task(accept_players(update, context))
+
+async def accept_players(update: Update, context: CallbackContext) -> None:
+    end_time = datetime.now() + timedelta(seconds=20)
+
+    while datetime.now() < end_time:
+        await asyncio.sleep(1)  # Ждем 1 секунду перед проверкой новых сообщений
+
+    usernames = [player['username'] for player in players.values()]
+    players_str = ', '.join(usernames)
+    print(players_str)
+    if len(usernames) == 1:
+        await context.bot.send_message(update.message.chat.id, "К сожалению, игроки не набраны!")
+    else:
+        await start_game(update.message.chat.id, context)
+
+async def handle_message(update: Update, context: CallbackContext) -> None:
+    if update.message.text == '21':
+        user_id = update.message.from_user.id
+        if user_id not in players:
+            players[user_id] = {
+                'hand': [deal_card(), deal_card()],
+                'score': 0,
+                'username': '@' + update.message.from_user.username
+            }
+            usernames = [player['username'] for player in players.values()]
+            players_str = ', '.join(usernames)
+            await update.message.reply_text(
+                f"{update.message.from_user.username} присоединился к столу игры в 21.\n За столом: {players_str}")
+
+# Функция для начала игры
+async def start_game(chat_id, context: CallbackContext):
+    print("start game")
+    if players:
+        await context.bot.send_message(chat_id, "Игра в 21 началась.")
+        for user_id, player in players.items():
+            await context.bot.send_message(user_id, f"Твои карты: {player['hand']}")
+            await context.bot.send_message(user_id, "Ещё?", reply_markup=generate_markup())
+            print("else")
+    else:
+        await context.bot.send_message(chat_id, "Никто не присоединился к столу игры в 21. Сорянчик.")
+
+# Функция для генерации клавиатуры
+async def generate_markup():
+    print("gen knopok")
+    keyboard = [
+        [InlineKeyboardButton("Взять ещё", callback_data='hit')],
+        [InlineKeyboardButton("Оставить как есть", callback_data='stand')]
+    ]
     return InlineKeyboardMarkup(keyboard)
 
+# Обработчик сообщения для взятия ещё одной карты или остановки
+async def handle_game_action(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    user_id = query.from_user.id
+    if user_id in players:
+        if query.data == 'hit':
+            players[user_id]['hand'].append(deal_card())
+            await query.edit_message_text(f"Твои карты: {players[user_id]['hand']}")
+            if calculate_score(players[user_id]['hand']) > 21:
+                await query.edit_message_text("Ты проиграл.")
+                del players[user_id]
+            else:
+                await query.edit_message_text("Ещё?", reply_markup=generate_markup())
+        elif query.data == 'stand':
+            players[user_id]['score'] = calculate_score(players[user_id]['hand'])
+            await query.edit_message_text(f"Ты остановился с {players[user_id]['score']} очками.")
+            await check_game_over(context)
+
+# Функция для проверки окончания игры
+async def check_game_over(context: CallbackContext):
+    if all(player['score'] != 0 for player in players.values()):
+        winner = max(players.values(), key=lambda x: x['score'])
+        for user_id, player in players.items():
+            await context.bot.send_message(user_id, f"Игра в 21 закончилась.\nПобедитель: @{winner['username']} с {winner['score']} очками.")
+        players.clear()
 def main():
     application = ApplicationBuilder().token(TOKEN).build()
-    application.add_handler(CommandHandler('damn', start_damn))
-    application.add_handler(CallbackQueryHandler(join_game, pattern='^join_game$'))
-    application.add_handler(CallbackQueryHandler(handle_action, pattern='^(take_card|enough_card)$'))
+
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.Regex('^⚔️$'), duels))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.Regex('^🚀$'), daily_reward))
     #application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.Regex('^21$'), join_game))
