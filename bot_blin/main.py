@@ -481,27 +481,7 @@ async def create_game_keyboard():
     return InlineKeyboardMarkup(keyboard)
 
 # Функция для начала набора игроков
-async def start_damn(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    chat_id = update.message.chat.id
-    await context.bot.send_message(chat_id, "Набор на игру в 21. Присоединиться?", reply_markup=await create_keyboard(),message_thread_id=12)
-    context.job_queue.run_once(deal_cards, 30, data=chat_id)
 
-# Функция для обработки присоединения игрока
-async def join_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    query = update.callback_query
-    user_id = query.from_user.id
-    username = query.from_user.username
-    chat_id = query.message.chat.id
-
-    if user_id in table_users:
-        await query.answer("Ты уже за столом")
-    else:
-        table_users.add(user_id)
-        usernames = []
-        for user_id in table_users:
-            chat_member = await context.bot.get_chat_member(chat_id, user_id)
-            usernames.append(chat_member.user.username)
-        await query.edit_message_text(f"Участники стола: {', '.join(usernames)}", reply_markup=await create_keyboard())
 
 # Функция для раздачи карт
 async def deal_cards(context: ContextTypes.DEFAULT_TYPE) -> None:
