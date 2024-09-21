@@ -221,7 +221,140 @@ async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     else:
         await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
         return
+table_users = set()
+players = {}
+finished_players = set()
 
+# Функция для создания клавиатуры
+async def create_keyboard():
+    keyboard = [[InlineKeyboardButton(text="Присоединиться", callback_data="join_game")]]
+    return InlineKeyboardMarkup(keyboard)
+
+# Функция для создания клавиатуры для игры
+async def create_game_keyboard():
+    keyboard = [
+        [InlineKeyboardButton(text="Ещё...", callback_data="take_card")],
+        [InlineKeyboardButton(text="Хватит", callback_data="enough_card")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+# Функция для начала набора игроков
+async def start_damn(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = update.message.chat.id
+    await context.bot.send_message(chat_id, "Набор на игру в 21. Присоединиться?", reply_markup=await create_keyboard())
+    context.job_queue.run_once(deal_cards, 30, data=chat_id)
+
+# Функция для обработки присоединения игрока
+async def join_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    user_id = query.from_user.id
+    username = query.from_user.username
+    chat_id = query.message.chat.id
+
+    if user_id in table_users:
+        await query.answer("Ты уже за столом")
+    else:
+        table_users.add(user_id)
+        usernames = []
+        for user_id in table_users:
+            chat_member = await context.bot.get_chat_member(chat_id, user_id)
+            usernames.append(chat_member.user.username)
+        await query.edit_message_text(f"Участники стола: {', '.join(usernames)}", reply_markup=await create_keyboard())
+
+# Функция для раздачи карт
+async def deal_cards(context: ContextTypes.DEFAULT_TYPE) -> None:
+    chat_id = context.job.data
+    await context.bot.send_message(chat_id=chat_id, text="Игра началась!")
+    suits = ['♠', '♣', '♥', '♦']
+    values = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10, 11]
+    deck = [(value, suit) for value in values for suit in suits]
+    random.shuffle(deck)
+
+    for user_id in table_users:
+        hand = [deck.pop(), deck.pop()]
+        players[user_id] = {
+            'hand': hand,
+            'score': 0,
+            'username': (await context.bot.get_chat_member(chat_id, user_id)).user.username
+        }
+        await context.bot.send_message(user_id, "Твои карты: {}".format(', '.join(f"{card[0]}{card[1]}" for card in hand)), reply_markup=await create_game_keyboard())
+
+# Функция для раздачи карты
+def deal_card():
+    suits = ['♠', '♣', '♥', '♦']
+    values = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10, 11]
+    deck = [(value, suit) for value in values for suit in suits]
+    random.shuffle(deck)
+    return deck.pop()
+
+# Функция для подсчета очков
+def calculate_score(hand):
+    score = sum(card[0] for card in hand)
+    if score > 21 and 11 in [card[0] for card in hand]:
+        hand.remove((11, hand[hand.index((11, card[1]))][1]))
+        hand.append((1, hand[hand.index((11, card[1]))][1]))
+        score = sum(card[0] for card in hand)
+    return score
+
+# Функция для обработки действий игрока
+async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    user_id = query.from_user.id
+    chat_id = query.message.chat.id
+
+    if user_id in players:
+        if query.data == 'take_card':
+            players[user_id]['hand'].append(deal_card())
+            score = calculate_score(players[user_id]['hand'])
+            if score == 21:
+                await query.edit_message_text(f"Твои карты: {', '.join(f'{card[0]}{card[1]}' for card in players[user_id]['hand'])}")
+            elif score > 21:
+                await query.edit_message_text(f"Твои карты: {', '.join(f'{card[0]}{card[1]}' for card in players[user_id]['hand'])}")
+                del players[user_id]
+            else:
+                await query.edit_message_text(f"Твои карты: {', '.join(f'{card[0]}{card[1]}' for card in players[user_id]['hand'])}\nЕщё?", reply_markup=await create_game_keyboard())
+        elif query.data == 'enough_card':
+            players[user_id]['score'] = calculate_score(players[user_id]['hand'])
+            finished_players.add(user_id)
+            await query.edit_message_text(f"Твои карты: {', '.join(f'{card[0]}{card[1]}' for card in players[user_id]['hand'])}\nТы остановился с {players[user_id]['score']} очками.")
+
+            # Проверка, все ли игроки завершили игру
+            if len(finished_players) == len(table_users):
+                await announce_winners(context)
+
+# Функция для объявления победителей
+async def announce_winners(context: ContextTypes.DEFAULT_TYPE) -> None:
+    winners = []
+    max_score = 0
+
+    for user_id, player in players.items():
+        score = player['score']
+        if score > max_score and score <= 21:
+            max_score = score
+            winners = [player['username']]
+        elif score == max_score:
+            winners.append(player['username'])
+
+    winners_text = ', '.join(winners)
+    await context.bot.send_message(chat_id="-1002171062047", text=f"Победители: {winners_text} с {max_score} очками.")
+    for pl in players:
+        if pl in winners:
+            cursor.execute('UPDATE users SET balance = balance + ? WHERE username = ?', (25*len(players)/len(winners), pl['username']))
+            conn.commit()
+            balance = cursor.execute('SELECT users WHERE username = ?',
+                                     (pl['username']))
+        else:
+            cursor.execute('UPDATE users SET balance = balance - ? WHERE username = ?',
+                           (25 * len(players) / len(winners), pl['username']))
+
+            conn.commit()
+
+    await context.bot.send_message(chat_id="-1002171062047", text=f"{balance}")
+
+    # Очистка данных для новой игры
+    table_users.clear()
+    players.clear()
+    finished_players.clear()
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     user_id = update.message.from_user.id
