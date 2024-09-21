@@ -483,7 +483,7 @@ async def create_game_keyboard():
 # Функция для начала набора игроков
 async def start_damn(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.message.chat.id
-    await context.bot.send_message(chat_id, "Набор на игру в 21. Присоединиться?", reply_markup=await create_keyboard())
+    await context.bot.send_message(chat_id, "Набор на игру в 21. Присоединиться?", reply_markup=await create_keyboard(),message_thread_id=12)
     context.job_queue.run_once(deal_cards, 30, data=chat_id)
 
 # Функция для обработки присоединения игрока
@@ -506,7 +506,7 @@ async def join_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 # Функция для раздачи карт
 async def deal_cards(context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = context.job.data
-    await context.bot.send_message(chat_id=chat_id, text="Игра началась!")
+    await context.bot.send_message(chat_id=chat_id, text="Игра началась!",message_thread_id=12)
     suits = ['♠', '♣', '♥', '♦']
     values = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10, 11]
     deck = [(value, suit) for value in values for suit in suits]
@@ -579,7 +579,7 @@ async def announce_winners(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> 
 
     if winners:
         winners_text = ', '.join(winners)
-        await context.bot.send_message(chat_id="1002171062047", text=f"Победители: {winners_text} с {max_score} очками.")
+        await context.bot.send_message(chat_id="1002171062047", text=f"Победители: {winners_text} с {max_score} очками.",message_thread_id=12)
     else:
         await context.bot.send_message(chat_id="1002171062047", text="Никто не выиграл.")
 
