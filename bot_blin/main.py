@@ -564,29 +564,6 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             if len(finished_players) == len(table_users):
                 await announce_winners(context, chat_id)
 
-# Функция для объявления победителей
-async def announce_winners(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> None:
-    winners = []
-    max_score = 0
-
-    for user_id, player in players.items():
-        score = player['score']
-        if score > max_score and score <= 21:
-            max_score = score
-            winners = [player['username']]
-        elif score == max_score:
-            winners.append(player['username'])
-
-    if winners:
-        winners_text = ', '.join(winners)
-        await context.bot.send_message(chat_id="1002171062047", text=f"Победители: {winners_text} с {max_score} очками.",message_thread_id=12)
-    else:
-        await context.bot.send_message(chat_id="1002171062047", text="Никто не выиграл.")
-
-    # Очистка данных для новой игры
-    table_users.clear()
-    players.clear()
-    finished_players.clear()
 
 def main():
     application = ApplicationBuilder().token(TOKEN).build()
