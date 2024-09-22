@@ -264,7 +264,7 @@ async def join_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 # Функция для раздачи карт
 async def deal_cards(context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = context.job.data
-    await context.bot.send_message(chat_id=chat_id, text="Игра началась!")
+    await context.bot.send_message(chat_id=chat_id, text="Игра началась!",message_thread_id=12)
     suits = ['♠', '♣', '♥', '♦']
     values = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10, 11]
     deck = [(value, suit) for value in values for suit in suits]
