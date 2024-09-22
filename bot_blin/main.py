@@ -336,7 +336,7 @@ async def announce_winners(context: ContextTypes.DEFAULT_TYPE) -> None:
             winners.append(player['username'])
 
     winners_text = ', '.join(winners)
-    await context.bot.send_message(chat_id="-1002171062047", text=f"Победители: {winners_text} с {max_score} очками.")
+    await context.bot.send_message(chat_id="-1002171062047", text=f"Победители: {winners_text} с {max_score} очками.",message_thread_id=12)
     for pl in players:
         if pl in winners:
             cursor.execute('UPDATE users SET balance = balance + ? WHERE username = ?', (25*len(players)/len(winners), pl['username']))
