@@ -241,7 +241,7 @@ async def create_game_keyboard():
 # Функция для начала набора игроков
 async def start_damn(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.message.chat.id
-    await context.bot.send_message(chat_id, "Набор на игру в 21. Присоединиться?", reply_markup=await create_keyboard())
+    await context.bot.send_message(chat_id, "Набор на игру в 21. Присоединиться?", reply_markup=await create_keyboard(),message_thread_id=12)
     context.job_queue.run_once(deal_cards, 30, data=chat_id)
 
 # Функция для обработки присоединения игрока
