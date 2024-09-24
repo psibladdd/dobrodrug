@@ -380,7 +380,7 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                                        message_thread_id=12)
 
 def get_top_users():
-    cursor.execute('SELECT username, balance FROM users ORDER BY balance DESC LIMIT 20')
+    cursor.execute('SELECT username, balance FROM users ORDER BY balance DESC LIMIT 10')
     top_users = cursor.fetchall()
     return top_users
 
@@ -404,7 +404,7 @@ def get_combo_text(dice_value: int):
 
 async def send_top_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     top_users = get_top_users()
-    message = "Топ 20 пользователей по очкам:\n"
+    message = "Топ 10 пользователей по очкам:\n"
     for i, (username, balance) in enumerate(top_users, start=1):
         message += f"{i}. {username}: {balance}\n"
     await context.bot.send_message(chat_id="-1002171062047", text=message, message_thread_id=12)
@@ -448,7 +448,7 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     user_name = update.message.from_user.username
-    if user_name not in ['why_dyrachyo', 'hlebnastole']:
+    if user_name not in ['hlebnastole', 'why_dyrachyo', 'sdmfy']:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='У вас нет доступа к этой программе')
         return
 
@@ -489,7 +489,7 @@ async def send_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         return
 
     user_name = update.message.from_user.username
-    if user_name not in ['why_dyrachyo', 'hlebnastole']:
+    if user_name not in ['hlebnastole', 'sdmfy', 'why_dyrachyo']:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='У вас нет доступа к этой команде')
         return
 
@@ -524,7 +524,7 @@ async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     user_name = update.message.from_user.username
-    if user_name not in ['why_dyrachyo', 'hlebnastole']:
+    if user_name not in ['hlebnastole', 'why_dyrachyo', 'sdmfy']:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='У вас нет доступа к этой команде')
         return
 
@@ -599,7 +599,7 @@ async def lood(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     user_name = update.message.from_user.username
-    if user_name not in ['why_dyrachyo']:
+    if user_name not in ['hlebnastole', 'why_dyrachyo', 'sdmfy']:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='У вас нет доступа к этой команде')
         return
 
@@ -905,8 +905,6 @@ async def check_game_over(context: CallbackContext):
         players.clear()
 def main():
     application = ApplicationBuilder().token(TOKEN).build()
-    
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
     application.add_handler(CommandHandler('damn', start_damn))
     application.add_handler(CallbackQueryHandler(join_game, pattern='^join_game$'))
     application.add_handler(CallbackQueryHandler(handle_action, pattern='^(take_card|enough_card)$'))
@@ -916,6 +914,7 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.Regex(
         '^(доброе утро|Доброе утро|Доброго утра|доброго утра|Доброе|доброе)$'), good_morning))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, send_anonymous_message))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
     application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_message))
     application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_anonymous_message))
     application.add_handler(MessageHandler(filters.Dice.ALL, handle_dice))
