@@ -448,7 +448,7 @@ async def balance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     user_name = update.message.from_user.username
-    if user_name not in ['hlebnastole', 'why_dyrachyo', 'sdmfy']:
+    if user_name not in ['why_dyrachyo']:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='У вас нет доступа к этой программе')
         return
 
@@ -489,7 +489,7 @@ async def send_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         return
 
     user_name = update.message.from_user.username
-    if user_name not in ['hlebnastole', 'sdmfy', 'why_dyrachyo']:
+    if user_name not in ['why_dyrachyo']:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='У вас нет доступа к этой команде')
         return
 
@@ -524,7 +524,7 @@ async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     user_name = update.message.from_user.username
-    if user_name not in ['hlebnastole', 'why_dyrachyo', 'sdmfy']:
+    if user_name not in ['why_dyrachyo']:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='У вас нет доступа к этой команде')
         return
 
@@ -599,7 +599,7 @@ async def lood(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     user_name = update.message.from_user.username
-    if user_name not in ['hlebnastole', 'why_dyrachyo', 'sdmfy']:
+    if user_name not in ['why_dyrachyo']:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='У вас нет доступа к этой команде')
         return
 
