@@ -489,7 +489,7 @@ async def send_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         return
 
     user_name = update.message.from_user.username
-    if user_name not in ['why_dyrachyo']:
+    if user_name not in ['why_dyrachyo', 'hlebnastole']:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='У вас нет доступа к этой команде')
         return
 
