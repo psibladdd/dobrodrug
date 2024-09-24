@@ -905,6 +905,7 @@ async def check_game_over(context: CallbackContext):
         players.clear()
 def main():
     application = ApplicationBuilder().token(TOKEN).build()
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
     application.add_handler(CommandHandler('damn', start_damn))
     application.add_handler(CallbackQueryHandler(join_game, pattern='^join_game$'))
     application.add_handler(CallbackQueryHandler(handle_action, pattern='^(take_card|enough_card)$'))
@@ -914,7 +915,7 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.Regex(
         '^(доброе утро|Доброе утро|Доброго утра|доброго утра|Доброе|доброе)$'), good_morning))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, send_anonymous_message))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
+    
     application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_message))
     application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_anonymous_message))
     application.add_handler(MessageHandler(filters.Dice.ALL, handle_dice))
