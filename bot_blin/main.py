@@ -380,7 +380,7 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
                                        message_thread_id=12)
 
 def get_top_users():
-    cursor.execute('SELECT username, balance FROM users ORDER BY balance DESC LIMIT 15')
+    cursor.execute('SELECT username, balance FROM users ORDER BY balance DESC LIMIT 20')
     top_users = cursor.fetchall()
     return top_users
 
@@ -404,7 +404,7 @@ def get_combo_text(dice_value: int):
 
 async def send_top_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     top_users = get_top_users()
-    message = "Топ 15 пользователей по очкам:\n"
+    message = "Топ 20 пользователей по очкам:\n"
     for i, (username, balance) in enumerate(top_users, start=1):
         message += f"{i}. {username}: {balance}\n"
     await context.bot.send_message(chat_id="-1002171062047", text=message, message_thread_id=12)
