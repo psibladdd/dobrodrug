@@ -231,13 +231,13 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='Вы успешно зарегистрированы!', message_thread_id=12)
 
 def get_top_users():
-    cursor.execute('SELECT username, balance FROM users ORDER BY balance DESC LIMIT 10')
+    cursor.execute('SELECT username, balance FROM users ORDER BY balance DESC LIMIT 20')
     top_users = cursor.fetchall()
     return top_users
 
 async def send_top_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     top_users = get_top_users()
-    message = "Топ 10 пользователей по очкам:\n"
+    message = "Топ 20 пользователей по очкам:\n"
     for i, (username, balance) in enumerate(top_users, start=1):
         message += f"{i}. {username}: {balance}\n"
     await context.bot.send_message(chat_id="-1002171062047", text=message, message_thread_id=12)
@@ -561,6 +561,11 @@ async def create_game_keyboard():
     ]
     return InlineKeyboardMarkup(keyboard)
 
+async def usernamee(update, context):
+    username = update.message.from_user.username
+    if username == None:
+        username = update.message.from_user.first_name
+    return username
 # Функция для начала набора игроков
 async def start_damn(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.message.chat.id
@@ -571,7 +576,7 @@ async def start_damn(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 async def join_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     user_id = query.from_user.id
-    username = query.from_user.username
+    username = usernamee(update,context)
     chat_id = query.message.chat.id
 
     if user_id in table_users:
@@ -581,14 +586,22 @@ async def join_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         usernames = []
         for user_id in table_users:
             chat_member = await context.bot.get_chat_member(chat_id, user_id)
-            usernames.append(chat_member.user.username)
+            usr = chat_member.user.username
+            if chat_member.user.username == None:
+                usr = "@"+chat_member.user.username
+            usernames.append(usr)
         await query.edit_message_text(f"Участники стола: {', '.join(usernames)}", reply_markup=await create_keyboard())
 
 # Функция для раздачи карт
 async def deal_cards(context: ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = context.job.data[0]
     message_id = context.job.data[1]
-    await context.bot.send_message(chat_id=chat_id, text="Игра началась!", message_thread_id=12)
+    keyboard = [
+        [InlineKeyboardButton("Перейти к боту", url=f"https://t.me/dobrodrug_bot")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await context.bot.send_message(chat_id=chat_id, text="Игра началась!", reply_markup=reply_markup,
+                                   message_thread_id=12)
     await context.bot.edit_message_reply_markup(chat_id=chat_id, message_id=message_id, reply_markup=None)
     suits = ['♠', '♣', '♥', '♦']
     values = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10, 1]
@@ -631,11 +644,18 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             if score == 21:
                 finished_players.add(username)
                 await query.edit_message_text(f"Твои карты: {', '.join(f'{card[0]}{card[1]}' for card in players[user_id]['hand'])}")
-
+                print(finished_players)
+                print(table_users)
+                if len(finished_players) == len(table_users):
+                    await announce_winners(context)
             elif score > 21:
                 finished_players.add(username)
                 players[user_id]['score'] = 1
                 await query.edit_message_text(f"Твои карты: {', '.join(f'{card[0]}{card[1]}' for card in players[user_id]['hand'])}")
+                print(finished_players)
+                print(table_users)
+                if len(finished_players) == len(table_users):
+                    await announce_winners(context)
             else:
                 await query.edit_message_text(f"Твои карты: {', '.join(f'{card[0]}{card[1]}' for card in players[user_id]['hand'])}\nЕщё?", reply_markup=await create_game_keyboard())
         elif query.data == 'enough_card':
@@ -656,27 +676,32 @@ async def announce_winners(context: ContextTypes.DEFAULT_TYPE) -> None:
 
     for user_id, player in players.items():
         score = player['score']
-        if score > max_score and score <= 21:
+        if score > max_score and score != 1:
             max_score = score
-            winners = [player['username']]
+            winners = [player]
         elif score == max_score:
-            winners.append(player['username'])
+            winners.append(player)
 
-    winners_text = ', '.join(winners)
-    print(players)
+    winners_text = ', '.join([player['username'] for player in winners])
+
+    add = int(25 * len(players) / len(winners))
+
     for pl in players:
-        if pl in winners:
+        if players[pl] in winners:
             cursor.execute('UPDATE users SET balance = balance + ? WHERE username = ?',
-                           (25 * len(players) / len(winners), "@"+players[pl]['username']))
-
+                           (add, "@" + players[pl]['username']))
             conn.commit()
         else:
-            cursor.execute('UPDATE users SET balance = balance - ? WHERE username = ?', (25, "@"+players[pl]['username']))
-
+            cursor.execute('UPDATE users SET balance = balance - ? WHERE username = ?', (25, "@" + players[pl]['username']))
             conn.commit()
 
-    await context.bot.send_message(chat_id="-1002171062047", text=f"Победители: {winners_text} с {max_score} очками.",
-                                   message_thread_id=12)
+    if winners:
+        await context.bot.send_message(chat_id="-1002171062047", text=f"Победители: {winners_text} с {max_score} очками.",
+                                       message_thread_id=12)
+    else:
+        await context.bot.send_message(chat_id="-1002171062047",
+                                       text=f"Никто не выйграл!",
+                                       message_thread_id=12)
 
     # Очистка данных для новой игры
     table_users.clear()
@@ -690,13 +715,11 @@ async def send_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         await send_message(update, context)
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     text = update.message.text
-    print(text)
     if text == '⚔️':
         await duels(update, context)
     elif text == '🚀':
         await daily_reward(update, context)
     elif text.lower() in ['доброе утро', 'доброго утра', 'доброе']:
-        print(text)
         await good_morning(update, context)
     elif update.effective_chat.type == Chat.PRIVATE:
         await send_anonymous_message(update, context)
