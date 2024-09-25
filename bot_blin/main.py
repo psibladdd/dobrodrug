@@ -456,7 +456,6 @@ async def lood(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def good_morning(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.message.from_user.id
     user_name = update.message.from_user.username or update.message.from_user.name
-
     cursor.execute('SELECT ID, morning FROM users WHERE ID = ?', (user_id,))
     existing_user = cursor.fetchone()
 
@@ -668,11 +667,11 @@ async def announce_winners(context: ContextTypes.DEFAULT_TYPE) -> None:
     for pl in players:
         if pl in winners:
             cursor.execute('UPDATE users SET balance = balance + ? WHERE username = ?',
-                           (25 * len(players) / len(winners), players[pl]['username']))
+                           (25 * len(players) / len(winners), "@"+players[pl]['username']))
 
             conn.commit()
         else:
-            cursor.execute('UPDATE users SET balance = balance - ? WHERE username = ?', (25, players[pl]['username']))
+            cursor.execute('UPDATE users SET balance = balance - ? WHERE username = ?', (25, "@"+players[pl]['username']))
 
             conn.commit()
 
@@ -691,12 +690,13 @@ async def send_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         await send_message(update, context)
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     text = update.message.text
-
+    print(text)
     if text == '⚔️':
         await duels(update, context)
     elif text == '🚀':
         await daily_reward(update, context)
     elif text.lower() in ['доброе утро', 'доброго утра', 'доброе']:
+        print(text)
         await good_morning(update, context)
     elif update.effective_chat.type == Chat.PRIVATE:
         await send_anonymous_message(update, context)
