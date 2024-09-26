@@ -379,7 +379,7 @@ async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     user_name = update.message.from_user.username
-    if user_name not in ['hlebnastole', 'why_dyrachyo', 'sdmfy']:
+    if user_name not in ['hlebnastole', 'why_dyrachyo', 'sdmfy', 'kkcchay']:
         await context.bot.send_message(chat_id=update.effective_chat.id, text='У вас нет доступа к этой команде')
         return
 
