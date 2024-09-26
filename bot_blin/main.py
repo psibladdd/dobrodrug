@@ -679,6 +679,11 @@ async def announce_winners(context: ContextTypes.DEFAULT_TYPE) -> None:
         if score > max_score and score != 1:
             max_score = score
             winners = [player]
+        elif score ==21:
+            if max_score == score:
+                winners.append(player) 
+            else:
+                winners =[player]
         elif score == max_score:
             winners.append(player)
 
