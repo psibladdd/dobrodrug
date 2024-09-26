@@ -648,7 +648,7 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 print(table_users)
                 if len(finished_players) == len(table_users):
                     await announce_winners(context)
-            elif score > 21:
+            elif score >= 22:
                 finished_players.add(username)
                 players[user_id]['score'] = 1
                 await query.edit_message_text(f"Твои карты: {', '.join(f'{card[0]}{card[1]}' for card in players[user_id]['hand'])}")
