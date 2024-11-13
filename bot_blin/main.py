@@ -8,6 +8,7 @@ from telegram import *
 from telegram.ext import *
 import json
 import gspread
+import traceback
 
 # Декоратор для логирования ошибок
 
@@ -29,7 +30,8 @@ cursor.execute('CREATE TABLE IF NOT EXISTS users ( ID INTEGER PRIMARY KEY, name 
 gc = gspread.service_account(filename='creds.json')
 
 wkc = gc.open("Заявки_швд25").sheet1
-
+logging.basicConfig(level=logging.INFO, filename='bot_errors.log', filemode='a',
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 # Открытие таблицы по имени
 
 
@@ -895,41 +897,50 @@ async def cancel(update: Update, context: CallbackContext) -> int:
     return ConversationHandler.END
 
 def main():
-    application = ApplicationBuilder().token(TOKEN).build()
-    application.add_handler(CallbackQueryHandler(handle_confirm))
-    application.add_handler(CommandHandler('start', start))
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('school', reg)],
-        states={
-            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_name)],
-            SURNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_surname)],
-            DOB: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_dob)],
-            SOURCE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_source)],
-            ABOUT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_about)],
-            GRADE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_grad)],
-            WHY: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_why)],
-        },
-        fallbacks=[CommandHandler('cancel', cancel)],
-    )
 
-    application.add_handler(conv_handler)
-    application.add_handler(MessageHandler(filters.Dice.ALL, handle_dice))
-    application.add_handler(CommandHandler('register', register))
-    application.add_handler(CommandHandler('balance', balance))
-    application.add_handler(CommandHandler('write', send_message))
-    application.add_handler(CommandHandler('quiz', quiz))
-    application.add_handler(CommandHandler('lood', lood))
-    application.add_handler(CommandHandler('top', send_top_users))
+    try:
+        logging.info("Starting the bot...")
+        application = ApplicationBuilder().token(TOKEN).build()
+        application.add_handler(CallbackQueryHandler(handle_confirm))
+        application.add_handler(CommandHandler('start', start))
+        conv_handler = ConversationHandler(
+            entry_points=[CommandHandler('school', reg)],
+            states={
+                NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_name)],
+                SURNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_surname)],
+                DOB: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_dob)],
+                SOURCE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_source)],
+                ABOUT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_about)],
+                GRADE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_grad)],
+                WHY: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_why)],
+            },
+            fallbacks=[CommandHandler('cancel', cancel)],
+        )
 
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^21$'), join_game))
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^(доброе утро|Доброе утро|Доброго утра|доброго утра|Доброе|доброе)$'), good_morning))
+        application.add_handler(conv_handler)
+        application.add_handler(MessageHandler(filters.Dice.ALL, handle_dice))
+        application.add_handler(CommandHandler('register', register))
+        application.add_handler(CommandHandler('balance', balance))
+        application.add_handler(CommandHandler('write', send_message))
+        application.add_handler(CommandHandler('quiz', quiz))
+        application.add_handler(CommandHandler('lood', lood))
+        application.add_handler(CommandHandler('top', send_top_users))
 
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^⚔️$'), duels))
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^🚀$'), daily_reward))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
-    application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_message))
-    application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_anonymous_message))
+        application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^21$'), join_game))
+        application.add_handler(MessageHandler(
+            filters.TEXT & filters.Regex('^(доброе утро|Доброе утро|Доброго утра|доброго утра|Доброе|доброе)$'),
+            good_morning))
 
-    application.run_polling()
+        application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^⚔️$'), duels))
+        application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^🚀$'), daily_reward))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
+        application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_message))
+        application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_anonymous_message))
+        application.run_polling()
+        logging.info("Bot started successfully.")
+    except Exception as e:
+        logging.error("An error occurred: %s", str(e))
+        logging.error(traceback.format_exc())
+
 if __name__ == '__main__':
     main()
