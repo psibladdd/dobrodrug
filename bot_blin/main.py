@@ -8,7 +8,7 @@ from telegram import *
 from telegram.ext import *
 import json
 import gspread
-import traceback
+from oauth2client.service_account import *
 
 # Декоратор для логирования ошибок
 
@@ -29,9 +29,8 @@ reg_counts = 1
 cursor.execute('CREATE TABLE IF NOT EXISTS users ( ID INTEGER PRIMARY KEY, name TEXT, balance INTEGER, username TEXT)')
 gc = gspread.service_account(filename='creds.json')
 
-wkc = gc.open("Заявки_швд25").sheet1
-logging.basicConfig(level=logging.INFO, filename='bot_errors.log', filemode='a',
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+wkc = gc.open("олег").sheet1
+
 # Открытие таблицы по имени
 
 
@@ -541,7 +540,7 @@ async def send_anonymous_message(update: Update, context: ContextTypes.DEFAULT_T
         pending_messages[message_id] = {'user_id': user_id, 'text': message_text, 'photo_file_id': photo_file_id if photo else None}
 
         # Отправка сообщения администратору для подтверждения
-        admin_chat_id = '6033842569'  # Замените на ID администратора
+        admin_chat_id = '1432989775'  # Замените на ID администратора
         keyboard = [
             [InlineKeyboardButton("Отправить", callback_data=f"approve_{message_id}")],
             [InlineKeyboardButton("Отклонить", callback_data=f"reject_{message_id}")],
@@ -840,6 +839,7 @@ async def handle_about(update: Update, context: CallbackContext) -> int:
     keyboard = [
         [
             InlineKeyboardButton("Сохранить", callback_data='save'),
+            InlineKeyboardButton("Редактировать", callback_data='edit'),
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -851,7 +851,7 @@ async def handle_about(update: Update, context: CallbackContext) -> int:
         f'откуда: {user_data["source"]}\n'
         f'Где учишься: {user_data["grade"]}\n'
         f'Почему хочешь стать вожатым?: {user_data["why"]}\n'
-        f'О себе: {user_data["about"]}\n',
+        f'О себе: {user_data["about"]}',
         reply_markup=reply_markup
     )
     return ConversationHandler.END
@@ -897,50 +897,41 @@ async def cancel(update: Update, context: CallbackContext) -> int:
     return ConversationHandler.END
 
 def main():
+    application = ApplicationBuilder().token(TOKEN).build()
+    application.add_handler(CallbackQueryHandler(handle_confirm))
+    application.add_handler(CommandHandler('start', start))
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('school', reg)],
+        states={
+            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_name)],
+            SURNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_surname)],
+            DOB: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_dob)],
+            SOURCE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_source)],
+            ABOUT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_about)],
+            GRADE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_grad)],
+            WHY: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_why)],
+        },
+        fallbacks=[CommandHandler('cancel', cancel)],
+    )
 
-    try:
-        logging.info("Starting the bot...")
-        application = ApplicationBuilder().token(TOKEN).build()
-        application.add_handler(CallbackQueryHandler(handle_confirm))
-        application.add_handler(CommandHandler('start', start))
-        conv_handler = ConversationHandler(
-            entry_points=[CommandHandler('school', reg)],
-            states={
-                NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_name)],
-                SURNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_surname)],
-                DOB: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_dob)],
-                SOURCE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_source)],
-                ABOUT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_about)],
-                GRADE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_grad)],
-                WHY: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_why)],
-            },
-            fallbacks=[CommandHandler('cancel', cancel)],
-        )
+    application.add_handler(conv_handler)
+    application.add_handler(MessageHandler(filters.Dice.ALL, handle_dice))
+    application.add_handler(CommandHandler('register', register))
+    application.add_handler(CommandHandler('balance', balance))
+    application.add_handler(CommandHandler('write', send_message))
+    application.add_handler(CommandHandler('quiz', quiz))
+    application.add_handler(CommandHandler('lood', lood))
+    application.add_handler(CommandHandler('top', send_top_users))
 
-        application.add_handler(conv_handler)
-        application.add_handler(MessageHandler(filters.Dice.ALL, handle_dice))
-        application.add_handler(CommandHandler('register', register))
-        application.add_handler(CommandHandler('balance', balance))
-        application.add_handler(CommandHandler('write', send_message))
-        application.add_handler(CommandHandler('quiz', quiz))
-        application.add_handler(CommandHandler('lood', lood))
-        application.add_handler(CommandHandler('top', send_top_users))
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^21$'), join_game))
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^(доброе утро|Доброе утро|Доброго утра|доброго утра|Доброе|доброе)$'), good_morning))
 
-        application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^21$'), join_game))
-        application.add_handler(MessageHandler(
-            filters.TEXT & filters.Regex('^(доброе утро|Доброе утро|Доброго утра|доброго утра|Доброе|доброе)$'),
-            good_morning))
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^⚔️$'), duels))
+    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^🚀$'), daily_reward))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
+    application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_message))
+    application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_anonymous_message))
 
-        application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^⚔️$'), duels))
-        application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^🚀$'), daily_reward))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
-        application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_message))
-        application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_anonymous_message))
-        application.run_polling()
-        logging.info("Bot started successfully.")
-    except Exception as e:
-        logging.error("An error occurred: %s", str(e))
-        logging.error(traceback.format_exc())
-
+    application.run_polling()
 if __name__ == '__main__':
     main()
