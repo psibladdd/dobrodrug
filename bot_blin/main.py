@@ -8,7 +8,6 @@ from telegram import *
 from telegram.ext import *
 import json
 import gspread
-from oauth2client.service_account import *
 
 # Декоратор для логирования ошибок
 
