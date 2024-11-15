@@ -31,8 +31,6 @@ gc = gspread.service_account(filename='creds.json')
 
 wkc = gc.open("олег").sheet1
 
-# Открытие таблицы по имени
-
 
 async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global lood_flag
@@ -923,11 +921,11 @@ def main():
     application.add_handler(CommandHandler('lood', lood))
     application.add_handler(CommandHandler('top', send_top_users))
 
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^21$'), join_game))
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^(доброе утро|Доброе утро|Доброго утра|доброго утра|Доброе|доброе)$'), good_morning))
-
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^⚔️$'), duels))
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^🚀$'), daily_reward))
+#    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^21$'), join_game))
+ #   application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^(доброе утро|Доброе утро|Доброго утра|доброго утра|Доброе|доброе)$'), good_morning))
+#
+ #   application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^⚔️$'), duels))
+  #  application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^🚀$'), daily_reward))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
     application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_message))
     application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_anonymous_message))
