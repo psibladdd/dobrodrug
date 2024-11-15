@@ -27,7 +27,7 @@ lood_flag = True
 emoji_count = {}
 reg_counts = 1
 cursor.execute('CREATE TABLE IF NOT EXISTS users ( ID INTEGER PRIMARY KEY, name TEXT, balance INTEGER, username TEXT)')
-gc = gspread.service_account(filename='creds.json')
+gc = gspread.service_account(filename='dobrodrug/bot_blin/creds.json')
 
 wkc = gc.open("олег").sheet1
 
@@ -836,8 +836,7 @@ async def handle_about(update: Update, context: CallbackContext) -> int:
     user_data = context.user_data
     keyboard = [
         [
-            InlineKeyboardButton("Сохранить", callback_data='save'),
-            InlineKeyboardButton("Редактировать", callback_data='edit'),
+            InlineKeyboardButton("Сохранить", callback_data='save')
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -853,15 +852,22 @@ async def handle_about(update: Update, context: CallbackContext) -> int:
         reply_markup=reply_markup
     )
     return ConversationHandler.END
-letters="ABCDEFG"
-user_data_keys = ["name","surname","dob","source","about","grade","why"]
+letters="ABCDEFGH"
+user_data_keys = ["name","surname","dob","source","about","grade","why","nick"]
 async def handle_confirm(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     await query.answer()
     global reg_counts
     user_data = context.user_data
+    user_data["nick"] = update.callback_query.from_user.name
     if query.data == 'save':
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Спасибо за регистрацию на ШВД'25!")
+        keyboard = [
+            [
+                InlineKeyboardButton("Сохранить", callback_data='saveXD')
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
         await context.bot.send_message(
             chat_id=6033842569,
             text=
@@ -872,19 +878,18 @@ async def handle_confirm(update: Update, context: CallbackContext) -> int:
             f'откуда: {user_data["source"]}\n'
             f'О себе: {user_data["about"]}\n'
             f'Где учишься: {user_data["grade"]}\n'
-            f'Почему хочешь стать вожатым?: {user_data["why"]}',
+            f'Почему хочешь стать вожатым?: {user_data["why"]}\n'
+            f'Телеграм: {user_data["nick"]}',
+            reply_markup=reply_markup
         )
-        reg_counts+=1
-        j=0
+    elif query.data == 'saveXD':
+        reg_counts += 1
+        j = 0
         for i in letters:
-            cell = i+str(reg_counts)
-            wkc.update(cell,[[user_data[user_data_keys[j]]]])
-            j+=1
-        cell="H"+str(reg_counts)
-        user_id = update.callback_query.from_user.id
-        wkc.update(cell,[[user_id]])
-    elif query.data == 'edit':
-        return await reg(update, context)
+            cell = i + str(reg_counts)
+            wkc.update(cell, [[user_data[user_data_keys[j]]]])
+            j += 1
+
 
 # Функция для отмены регистрации
 async def cancel(update: Update, context: CallbackContext) -> int:
