@@ -4,9 +4,13 @@ from datetime import datetime, timedelta
 import time
 import asyncio
 import random
+from telegram.constants import ParseMode
 from telegram import *
 from telegram.ext import *
 import json
+import os
+from dotenv import load_dotenv
+
 import gspread
 from oauth2client.service_account import *
 
@@ -27,10 +31,13 @@ lood_flag = True
 emoji_count = {}
 reg_counts = 1
 cursor.execute('CREATE TABLE IF NOT EXISTS users ( ID INTEGER PRIMARY KEY, name TEXT, balance INTEGER, username TEXT)')
-gc = gspread.service_account(filename='dobrodrug/bot_blin/creds.json')
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(dotenv_path)
+# Получаем путь к файлу учетных данных из переменной окружения
+creds_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+gc = gspread.service_account(filename=creds_path)
 
 wkc = gc.open("олег").sheet1
-
 
 async def handle_dice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global lood_flag
@@ -768,12 +775,12 @@ NAME, SURNAME, DOB, SOURCE, ABOUT, GRADE, WHY = range(7)
 async def reg(update: Update, context: CallbackContext) -> int:
     if update.callback_query:
         await update.callback_query.message.reply_text(
-            text='Имя:',
+            text='Введи свое имя:',
             reply_markup=ForceReply(selective=True),
         )
     else:
         await update.message.reply_text(
-            text='Имя:',
+            text='Введи свое имя:',
             reply_markup=ForceReply(selective=True),
         )
     return NAME
@@ -782,7 +789,7 @@ async def reg(update: Update, context: CallbackContext) -> int:
 async def handle_name(update: Update, context: CallbackContext) -> int:
     context.user_data['name'] = update.message.text
     await update.message.reply_text(
-        'Фамилия:',
+        'Введи свою фамилию:',
         reply_markup=ForceReply(selective=True),
     )
     return SURNAME
@@ -791,7 +798,7 @@ async def handle_name(update: Update, context: CallbackContext) -> int:
 async def handle_surname(update: Update, context: CallbackContext) -> int:
     context.user_data['surname'] = update.message.text
     await update.message.reply_text(
-        'Дата:',
+        'Введи свою дату рождения (в формате дд.мм.гггг)',
         reply_markup=ForceReply(selective=True),
     )
     return DOB
@@ -800,7 +807,7 @@ async def handle_surname(update: Update, context: CallbackContext) -> int:
 async def handle_dob(update: Update, context: CallbackContext) -> int:
     context.user_data['dob'] = update.message.text
     await update.message.reply_text(
-        'Откуда узнал',
+        'Расскажи откуда ты узнал про "Добро".',
         reply_markup=ForceReply(selective=True),
     )
     return SOURCE
@@ -809,7 +816,7 @@ async def handle_dob(update: Update, context: CallbackContext) -> int:
 async def handle_source(update: Update, context: CallbackContext) -> int:
     context.user_data['source'] = update.message.text
     await update.message.reply_text(
-        'Где учишься',
+        'Где ты учишься?',
         reply_markup=ForceReply(selective=True),
     )
     return GRADE
@@ -817,7 +824,7 @@ async def handle_source(update: Update, context: CallbackContext) -> int:
 async def handle_grad(update: Update, context: CallbackContext) -> int:
     context.user_data['grade'] = update.message.text
     await update.message.reply_text(
-        'Почему хочешь стать вожатым',
+        'Расскажи почему хочешь стать вожатым.',
         reply_markup=ForceReply(selective=True),
     )
     return WHY
@@ -825,7 +832,7 @@ async def handle_grad(update: Update, context: CallbackContext) -> int:
 async def handle_why(update: Update, context: CallbackContext) -> int:
     context.user_data['why'] = update.message.text
     await update.message.reply_text(
-        'О себе:',
+        'Расскажи немного у себе (хобби, увлечения и тд)',
         reply_markup=ForceReply(selective=True),
     )
     return ABOUT
@@ -833,6 +840,8 @@ async def handle_why(update: Update, context: CallbackContext) -> int:
 # Функция для обработки информации о себе
 async def handle_about(update: Update, context: CallbackContext) -> int:
     context.user_data['about'] = update.message.text
+    context.user_data["nick"] = update.message.from_user.name
+    context.user_data['ID'] = update.message.from_user.id
     user_data = context.user_data
     keyboard = [
         [
@@ -841,34 +850,40 @@ async def handle_about(update: Update, context: CallbackContext) -> int:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        f'Рега\n\n'
-        f'имя: {user_data["name"]}\n'
-        f'фамилия: {user_data["surname"]}\n'
-        f'др: {user_data["dob"]}\n'
-        f'откуда: {user_data["source"]}\n'
+        f'Твои данные! Проверь их, пожалуйста!\n\n'
+        f'Имя: {user_data["name"]}\n'
+        f'Фамилия: {user_data["surname"]}\n'
+        f'День рождения: {user_data["dob"]}\n'
+        f'Откуда узнал: {user_data["source"]}\n'
         f'Где учишься: {user_data["grade"]}\n'
         f'Почему хочешь стать вожатым?: {user_data["why"]}\n'
-        f'О себе: {user_data["about"]}',
+        f'О себе: {user_data["about"]}\n'
+        f'Если хочешь что-то неправильно, то напиши /school!',
         reply_markup=reply_markup
     )
+    datas.append(user_data)
     return ConversationHandler.END
-letters="ABCDEFGH"
-user_data_keys = ["name","surname","dob","source","about","grade","why","nick"]
+letters="ABCDEFGHI"
+datas = []
+user_data_keys = ["name", "surname","dob","source","about","grade","why","nick","ID"]
 async def handle_confirm(update: Update, context: CallbackContext) -> int:
     query = update.callback_query
     await query.answer()
     global reg_counts
     user_data = context.user_data
-    user_data["nick"] = update.callback_query.from_user.name
-    if query.data == 'save':
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Спасибо за регистрацию на ШВД'25!")
+    print(user_data)
+    action = query.data.split("_")[0]
+    print(action)
+    if action == 'save':
+        my_user= "@why_dyrachyo"
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Спасибо за регистрацию на ШВД'25!\nПо всем вопросам можешь написать Дмитрию ({my_user})",parse_mode=ParseMode.HTML)
         keyboard = [
             [
-                InlineKeyboardButton("Сохранить", callback_data='saveXD')
+                InlineKeyboardButton("Сохранить", callback_data=f'saveXD_{reg_counts}')
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await context.bot.send_message(
+        message = await context.bot.send_message(
             chat_id=6033842569,
             text=
             f'Рега\n\n'
@@ -879,12 +894,17 @@ async def handle_confirm(update: Update, context: CallbackContext) -> int:
             f'О себе: {user_data["about"]}\n'
             f'Где учишься: {user_data["grade"]}\n'
             f'Почему хочешь стать вожатым?: {user_data["why"]}\n'
-            f'Телеграм: {user_data["nick"]}',
+            f'Телеграм: {user_data["nick"]}\n'
+            f'ID: {user_data["ID"]}',
             reply_markup=reply_markup
         )
-    elif query.data == 'saveXD':
+
+    elif action == 'saveXD':
+        count = query.data.split("_")[1]
         reg_counts += 1
         j = 0
+        user_data = datas[reg_counts-2]
+
         for i in letters:
             cell = i + str(reg_counts)
             wkc.update(cell, [[user_data[user_data_keys[j]]]])
@@ -899,10 +919,62 @@ async def cancel(update: Update, context: CallbackContext) -> int:
     )
     return ConversationHandler.END
 
+message_to_id = [
+]
+react_ids = {}
+async def sending(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global react_ids
+    if update.effective_chat.id == 6033842569:
+        text = ' '.join(context.args)
+        column_values = wkc.col_values(9)
+        # Вывод значений столбца
+        for value in column_values[1:]:
+            if value not in react_ids.keys():
+                react_ids[value] = []
+            message = await context.bot.send_message(chat_id=value, text=text)
+            react_ids[value].append(message.message_id)
+            print(react_ids[value])
+            message_to_id.append({'user_id': value, 'message_id': message.message_id, 'reaction': False})
+            row_index = column_values.index(value) + 1
+            # wkc.update_cell(row_index, 10, 'отметился')  # 10 - это индекс столбца, куда нужно записать "отметился"
+
+            for i in range(0, 100, 2):
+                if not wkc.cell(row=row_index, col=10 + i).value:
+                    wkc.update_cell(row_index, 10 + i, text)
+                    break
+            await asyncio.sleep(10)
+
+
+
+async def get_rect(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    global react_ids
+    if update.message_reaction:
+        message_id = update.message_reaction.message_id
+        user_id = update.message_reaction.user.id
+        column_values = wkc.col_values(9)
+        user_id=str(user_id)
+        if user_id in column_values:
+            for msg in message_to_id:
+                if msg['user_id'] == user_id and msg['message_id'] == message_id:
+                    msg['reaction'] = True
+                    break
+
+            row_index = column_values.index(user_id) + 1
+
+            i = react_ids[user_id].index(message_id)
+            wkc.update_cell(row_index, 11 + i*2, 'отметился')
+async def check(update: Update, context: ContextTypes.DEFAULT_TYPE)->None:
+    if update.effective_chat.id == 6033842569:
+        for i in range(1, reg_counts):
+            row_values = wkc.row_values(reg_counts)
+            if '' in row_values or row_values[len(row_values)-1] != 'отметился':
+                await context.bot.send_message(chat_id=row_values[8],text='Привет! \nСлушай, я не вижу реакций на твоих сообщениях! Пожалуйста, прочитай сообщения и поставь их, показав мне, что ты их прочитал! ')
 def main():
     application = ApplicationBuilder().token(TOKEN).build()
     application.add_handler(CallbackQueryHandler(handle_confirm))
     application.add_handler(CommandHandler('start', start))
+    application.add_handler(CommandHandler('send', sending))
+    application.add_handler(CommandHandler('check', check))
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('school', reg)],
         states={
@@ -918,22 +990,24 @@ def main():
     )
 
     application.add_handler(conv_handler)
-    application.add_handler(MessageHandler(filters.Dice.ALL, handle_dice))
-    application.add_handler(CommandHandler('register', register))
-    application.add_handler(CommandHandler('balance', balance))
-    application.add_handler(CommandHandler('write', send_message))
-    application.add_handler(CommandHandler('quiz', quiz))
-    application.add_handler(CommandHandler('lood', lood))
-    application.add_handler(CommandHandler('top', send_top_users))
+
+    application.add_handler(MessageReactionHandler(get_rect))
+   # application.add_handler(MessageHandler(filters.Dice.ALL, handle_dice))
+  #  application.add_handler(CommandHandler('register', register))
+    #application.add_handler(CommandHandler('balance', balance))
+    #application.add_handler(CommandHandler('write', send_message))
+    #application.add_handler(CommandHandler('quiz', quiz))
+    #application.add_handler(CommandHandler('lood', lood))
+    #application.add_handler(CommandHandler('top', send_top_users))
 
 #    application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^21$'), join_game))
  #   application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^(доброе утро|Доброе утро|Доброго утра|доброго утра|Доброе|доброе)$'), good_morning))
 #
  #   application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^⚔️$'), duels))
   #  application.add_handler(MessageHandler(filters.TEXT & filters.Regex('^🚀$'), daily_reward))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
-    application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_message))
-    application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_anonymous_message))
+    #application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, check_answer))
+    #application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_message))
+    #application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, send_anonymous_message))
 
     application.run_polling()
 if __name__ == '__main__':
